@@ -119,9 +119,9 @@ export default function LoginPage() {
           <div className="flex flex-col items-center gap-2 mb-4">
             <div className="flex items-center gap-2">
               <Truck className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-foreground">LogiSystem</h1>
+              <h1 className="text-2xl font-bold text-foreground">UvaTracer</h1>
             </div>
-            <p className="text-sm text-muted-foreground text-center">Sistema de Gestión Logística Agrícola</p>
+            <p className="text-sm text-muted-foreground text-center">Sistema de Gestión Logística GLOBAL</p>
           </div>
 
           <Card className="border-border/50 shadow-lg">

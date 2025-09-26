@@ -30,8 +30,10 @@ CREATE TABLE public.acopio_recepcion (
   calidad text,
   responsable_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  id_lote uuid,
   CONSTRAINT acopio_recepcion_pkey PRIMARY KEY (id),
-  CONSTRAINT acopio_recepcion_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
+  CONSTRAINT acopio_recepcion_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id),
+  CONSTRAINT acopio_recepcion_id_lote_fkey FOREIGN KEY (id_lote) REFERENCES public.lotes(id)
 );
 CREATE TABLE public.camiones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -41,7 +43,11 @@ CREATE TABLE public.camiones (
   activo boolean DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT camiones_pkey PRIMARY KEY (id)
+  id_fundo uuid,
+  id_lote uuid,
+  CONSTRAINT camiones_pkey PRIMARY KEY (id),
+  CONSTRAINT camiones_id_fundo_fkey FOREIGN KEY (id_fundo) REFERENCES public.fundos(id),
+  CONSTRAINT camiones_id_lote_fkey FOREIGN KEY (id_lote) REFERENCES public.lotes(id)
 );
 CREATE TABLE public.campo_carreta (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -61,8 +67,22 @@ CREATE TABLE public.campo_recoleccion (
   calidad text,
   responsable_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  id_lote uuid,
   CONSTRAINT campo_recoleccion_pkey PRIMARY KEY (id),
-  CONSTRAINT campo_recoleccion_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
+  CONSTRAINT campo_recoleccion_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id),
+  CONSTRAINT campo_recoleccion_id_lote_fkey FOREIGN KEY (id_lote) REFERENCES public.lotes(id)
+);
+CREATE TABLE public.fundos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nombre text NOT NULL UNIQUE,
+  ubicacion text,
+  area_hectareas numeric,
+  responsable_id uuid,
+  activo boolean DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT fundos_pkey PRIMARY KEY (id),
+  CONSTRAINT fundos_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.guias (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -75,6 +95,22 @@ CREATE TABLE public.guias (
   CONSTRAINT guias_pkey PRIMARY KEY (id),
   CONSTRAINT guias_id_camion_fkey FOREIGN KEY (id_camion) REFERENCES public.camiones(id),
   CONSTRAINT guias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.lotes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_fundo uuid NOT NULL,
+  nombre text NOT NULL,
+  area_hectareas numeric,
+  tipo_cultivo text,
+  variedad text,
+  fecha_siembra date,
+  estado text DEFAULT 'activo'::text CHECK (estado = ANY (ARRAY['activo'::text, 'inactivo'::text, 'cosechado'::text])),
+  responsable_id uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT lotes_pkey PRIMARY KEY (id),
+  CONSTRAINT lotes_id_fundo_fkey FOREIGN KEY (id_fundo) REFERENCES public.fundos(id),
+  CONSTRAINT lotes_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.packing (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -101,6 +137,27 @@ CREATE TABLE public.profiles (
   avatar_url text,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_fundo_permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  fundo_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT user_fundo_permissions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_fundo_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT user_fundo_permissions_fundo_id_fkey FOREIGN KEY (fundo_id) REFERENCES public.fundos(id)
+);
+CREATE TABLE public.user_module_permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  module_name text NOT NULL,
+  can_read boolean DEFAULT true,
+  can_write boolean DEFAULT false,
+  can_delete boolean DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT user_module_permissions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_module_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.user_roles (
   user_id uuid NOT NULL,

@@ -20,6 +20,7 @@ const { data: profile } = await supabase
   .single()
 
 let camionesQuery = supabase.from("camiones").select("*").eq("activo", true)
+let fundoIds: string[] | null = null
 
 // Si no es admin ni operador, filtrar por permisos de fundo
 if (profile?.rol !== 'admin' && profile?.rol !== 'operador') {
@@ -30,7 +31,7 @@ if (profile?.rol !== 'admin' && profile?.rol !== 'operador') {
     .eq("user_id", user.id)
 
   if (fundoPermissions && fundoPermissions.length > 0) {
-    const fundoIds = fundoPermissions.map(fp => fp.fundo_id)
+    fundoIds = fundoPermissions.map(fp => fp.fundo_id)
     // Filtrar camiones que estén asignados a los fundos permitidos
     camionesQuery = camionesQuery.in("id_fundo", fundoIds)
   } else {
@@ -39,12 +40,31 @@ if (profile?.rol !== 'admin' && profile?.rol !== 'operador') {
   }
 }
 
-const { data: camiones, error } = await camionesQuery.order("chofer")
+const { data: camiones, error: camionesError } = await camionesQuery.order("chofer")
 
+if (camionesError) {
+  console.error("Error fetching camiones:", camionesError)
+}
 
-  if (error) {
-    console.error("Error fetching camiones:", error)
+// Cargar lotes accesibles
+let lotesQuery = supabase
+  .from("lotes")
+  .select("id, id_fundo, nombre, estado")
+  .eq("estado", "activo")
+
+if (profile?.rol !== 'admin' && profile?.rol !== 'operador') {
+  if (fundoIds && fundoIds.length > 0) {
+    lotesQuery = lotesQuery.in("id_fundo", fundoIds)
+  } else {
+    lotesQuery = lotesQuery.eq("id", "00000000-0000-0000-0000-000000000000")
   }
+}
+
+const { data: lotes, error: lotesError } = await lotesQuery.order("nombre")
+
+if (lotesError) {
+  console.error("Error fetching lotes:", lotesError)
+}
 
   return (
     <div className="space-y-6">
@@ -53,7 +73,7 @@ const { data: camiones, error } = await camionesQuery.order("chofer")
         <p className="text-muted-foreground">Registra una nueva salida de camión</p>
       </div>
 
-      <GuiaForm camiones={camiones || []} />
+      <GuiaForm camiones={camiones || []} lotes={lotes || []} />
     </div>
   )
 }

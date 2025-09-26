@@ -42,6 +42,17 @@ export default async function EditGuiaPage({ params }: EditGuiaPageProps) {
     console.error("Error fetching camiones:", camionesError)
   }
 
+  // Cargar lotes activos (admin)
+  const { data: lotes, error: lotesError } = await supabase
+    .from("lotes")
+    .select("id, id_fundo, nombre, estado")
+    .eq("estado", "activo")
+    .order("nombre")
+
+  if (lotesError) {
+    console.error("Error fetching lotes:", lotesError)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -49,7 +60,7 @@ export default async function EditGuiaPage({ params }: EditGuiaPageProps) {
         <p className="text-muted-foreground">Modifica la información de la guía</p>
       </div>
 
-      <GuiaForm camiones={camiones || []} guia={guia} />
+      <GuiaForm camiones={camiones || []} lotes={lotes || []} guia={guia} />
     </div>
   )
 }

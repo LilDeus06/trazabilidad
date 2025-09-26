@@ -18,28 +18,46 @@ interface Camion {
   chofer: string
   placa: string
   capacidad: number
+  id_fundo: string
+}
+
+interface Lote {
+  id: string
+  id_fundo: string
+  nombre: string
 }
 
 interface Guia {
   id?: string
   fecha_hora: string
   id_camion: string
+  id_fundo?: string
+  id_lote?: string
   enviadas: number
   guias: string
 }
 
 interface GuiaFormProps {
   camiones: Camion[]
+  lotes: Lote[]
   guia?: Guia
 }
 
-export function GuiaForm({ camiones, guia }: GuiaFormProps) {
-  const [formData, setFormData] = useState({
-    fecha_hora: guia?.fecha_hora
-  ? new Date(guia.fecha_hora).toISOString().slice(0, 16)
-  : new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 16), // UTC-5 para Perú
+export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
+  // Función auxiliar para formatear una fecha a la cadena YYYY-MM-DDTHH:mm en la zona horaria local
+  const getLocalISOString = (date: Date) => {
+    const year = date.getFullYear()
+    const month = (date.getMonth() + 1).toString().padStart(2, "0")
+    const day = date.getDate().toString().padStart(2, "0")
+    const hours = date.getHours().toString().padStart(2, "0")
+    const minutes = date.getMinutes().toString().padStart(2, "0")
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
 
+  const [formData, setFormData] = useState({
+    fecha_hora: guia?.fecha_hora ? getLocalISOString(new Date(guia.fecha_hora)) : getLocalISOString(new Date()),
     id_camion: guia?.id_camion || "",
+    id_lote: guia?.id_lote || "",
     enviadas: guia?.enviadas || 0,
     guias: guia?.guias || "",
   })
@@ -47,6 +65,7 @@ export function GuiaForm({ camiones, guia }: GuiaFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const filteredLotes = (lotes || []).filter((l) => !selectedCamion || l.id_fundo === selectedCamion.id_fundo)
 
   useEffect(() => {
     if (formData.id_camion) {
@@ -54,6 +73,16 @@ export function GuiaForm({ camiones, guia }: GuiaFormProps) {
       setSelectedCamion(camion || null)
     }
   }, [formData.id_camion, camiones])
+
+  useEffect(() => {
+    // Reset id_lote if it doesn't belong to the selected camión's fundo
+    if (formData.id_lote && selectedCamion) {
+      const isCompatible = filteredLotes.some((l) => l.id === formData.id_lote)
+      if (!isCompatible) {
+        setFormData((prev) => ({ ...prev, id_lote: "" }))
+      }
+    }
+  }, [selectedCamion, formData.id_lote, filteredLotes])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,6 +101,8 @@ export function GuiaForm({ camiones, guia }: GuiaFormProps) {
       const guiaData = {
         fecha_hora: new Date(formData.fecha_hora).toISOString(),
         id_camion: formData.id_camion,
+        id_fundo: selectedCamion?.id_fundo,
+        id_lote: formData.id_lote || null,
         enviadas: formData.enviadas,
         guias: formData.guias,
         usuario_id: user.id,
@@ -164,6 +195,31 @@ export function GuiaForm({ camiones, guia }: GuiaFormProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="id_lote">Lote</Label>
+                    <Select
+                      value={formData.id_lote}
+                      onValueChange={(value) => setFormData({ ...formData, id_lote: value })}
+                      disabled={filteredLotes.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectedCamion ? "Selecciona un lote" : "Selecciona un camión primero"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredLotes.map((lote) => (
+                          <SelectItem key={lote.id} value={lote.id}>
+                            {lote.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedCamion && filteredLotes.length === 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        No hay lotes activos disponibles para el fundo del camión seleccionado.
+                      </div>
+                    )}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

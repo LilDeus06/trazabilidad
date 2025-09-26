@@ -27,6 +27,7 @@ interface Guia {
   id: string
   fecha_hora: string
   id_camion: string
+  id_fundo: string
   enviadas: number
   guias: string
   usuario_id: string
@@ -35,7 +36,13 @@ interface Guia {
     chofer: string
     placa: string
     capacidad: number
+    fundos: {
+      nombre: string
+    }
   }
+  fundos: {
+    nombre: string
+  } | null
 }
 
 interface UserProfile {
@@ -57,13 +64,19 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
 
+  const todayInPeru = new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" })
+
   const filteredGuias = guias.filter((guia) => {
     const matchesSearch =
       guia.camiones.chofer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       guia.camiones.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      guia.guias.toLowerCase().includes(searchTerm.toLowerCase())
+      guia.guias.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (guia.camiones.fundos?.nombre || "").toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesDate = !dateFilter || guia.fecha_hora.startsWith(dateFilter)
+    const matchesDate = !dateFilter
+      ? true
+      : // Compara solo la parte de la fecha (YYYY-MM-DD)
+        new Date(guia.fecha_hora).toISOString().split("T")[0] === dateFilter
 
     return matchesSearch && matchesDate
   })
@@ -90,6 +103,10 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
 
   const getTotalJabas = () => {
     return filteredGuias.reduce((total, guia) => total + guia.enviadas, 0)
+  }
+
+  const getTodayJabas = () => {
+    return guias.filter((g) => new Date(g.fecha_hora).toISOString().startsWith(todayInPeru)).length
   }
 
   return (
@@ -130,9 +147,7 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {guias.filter((g) => g.fecha_hora.startsWith(new Date().toISOString().split("T")[0])).length}
-            </div>
+            <div className="text-2xl font-bold">{getTodayJabas()}</div>
           </CardContent>
         </Card>
       </div>
@@ -152,7 +167,7 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por chofer, placa o guía..."
+                  placeholder="Buscar por chofer, placa, guía o fundo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8 w-64"
@@ -180,6 +195,7 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                     <TableHead>Fecha y Hora</TableHead>
                     <TableHead>Camión</TableHead>
                     <TableHead>Chofer</TableHead>
+                    <TableHead>Fundo</TableHead>
                     <TableHead>Guía</TableHead>
                     <TableHead>Jabas Enviadas</TableHead>
                     <TableHead>Usuario</TableHead>
@@ -207,6 +223,7 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{guia.camiones.chofer}</TableCell>
+                      <TableCell className="font-medium">{guia.camiones.fundos?.nombre || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
                           {guia.guias}

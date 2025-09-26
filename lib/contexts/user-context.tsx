@@ -23,7 +23,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
 const CACHE_KEY = 'user_profile_cache'
-const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes (increased to reduce refresh issues)
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 interface UserProviderProps {
   children: ReactNode
@@ -35,16 +35,18 @@ export function UserProvider({ children }: UserProviderProps) {
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createBrowserClient()
 
-  const loadUserFromCache = (): UserProfile | null => {
+  const loadUserFromCache = (): { data: UserProfile | null, isExpired: boolean } => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
       if (cached) {
         const { data, timestamp } = JSON.parse(cached)
-        if (Date.now() - timestamp < CACHE_DURATION) {
+        const isExpired = Date.now() - timestamp >= CACHE_DURATION
+        if (!isExpired) {
           console.log('[v0] Loading user profile from cache')
-          return data
+          return { data, isExpired: false }
         } else {
           console.log('[v0] Cache expired, will fetch from database')
+          return { data, isExpired: true }
         }
       }
     } catch (error) {
@@ -52,7 +54,7 @@ export function UserProvider({ children }: UserProviderProps) {
       // Clear corrupted cache
       localStorage.removeItem(CACHE_KEY)
     }
-    return null
+    return { data: null, isExpired: false }
   }
 
   const saveUserToCache = (profileData: UserProfile) => {
@@ -69,10 +71,10 @@ export function UserProvider({ children }: UserProviderProps) {
   const loadProfile = async (userId: string, forceRefresh: boolean = false): Promise<UserProfile | null> => {
     // Try cache first (unless force refresh)
     if (!forceRefresh) {
-      const cachedProfile = loadUserFromCache()
-      if (cachedProfile && cachedProfile.id === userId) {
-        setProfile(cachedProfile)
-        return cachedProfile
+      const cached = loadUserFromCache()
+      if (cached.data && cached.data.id === userId && !cached.isExpired) {
+        setProfile(cached.data)
+        return cached.data
       }
     }
 
@@ -87,7 +89,14 @@ export function UserProvider({ children }: UserProviderProps) {
 
       if (error) {
         console.error('[v0] Error loading profile:', error)
-        // Clear cache on error to prevent stale data
+        // If we have cached data (even expired), use it as fallback
+        const cached = loadUserFromCache()
+        if (cached.data && cached.data.id === userId) {
+          console.log('[v0] Using cached profile due to fetch error')
+          setProfile(cached.data)
+          return cached.data
+        }
+        // No cache available, clear and return null
         localStorage.removeItem(CACHE_KEY)
         return null
       }
@@ -103,7 +112,14 @@ export function UserProvider({ children }: UserProviderProps) {
       return profileData
     } catch (error) {
       console.error('[v0] Error in loadProfile:', error)
-      // Clear cache on error
+      // If we have cached data (even expired), use it as fallback
+      const cached = loadUserFromCache()
+      if (cached.data && cached.data.id === userId) {
+        console.log('[v0] Using cached profile due to fetch error')
+        setProfile(cached.data)
+        return cached.data
+      }
+      // No cache available
       localStorage.removeItem(CACHE_KEY)
       return null
     }

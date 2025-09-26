@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { GuiasTable } from "@/components/guias/guias-table"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ export default async function GuiasPage() {
   // Obtener perfil del usuario
   const { data: profile } = await supabase.from("profiles").select("rol").eq("id", user.id).single()
 
-  // Obtener guías con información del camión
+  // Obtener guías con información del camión y fundo
   const { data: guias, error } = await supabase
     .from("guias")
     .select(`
@@ -26,7 +26,13 @@ export default async function GuiasPage() {
       camiones (
         chofer,
         placa,
-        capacidad
+        capacidad,
+        fundos (
+          nombre
+        )
+      ),
+      fundos (
+        nombre
       )
     `)
     .order("fecha_hora", { ascending: false })

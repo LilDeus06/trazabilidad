@@ -20,7 +20,7 @@ export function useUserPermissions() {
   const [permissions, setPermissions] = useState<ModulePermission[]>([])
   const [fundoPermissions, setFundoPermissions] = useState<FundoPermission[]>([])
   const [loading, setLoading] = useState(true)
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const supabase = createBrowserClient()
 
   useEffect(() => {
@@ -45,12 +45,12 @@ export function useUserPermissions() {
           .select('module_name, can_read, can_write, can_delete')
           .eq('user_id', user.id)
 
-        if (moduleError) {
-          console.error('[v0] Error fetching module permissions:', moduleError)
+        if (moduleError || !moduleData || moduleData.length === 0) {
+          if (moduleError) console.error('[v0] Error fetching module permissions:', moduleError)
           // Fallback to role-based permissions
           setPermissions(getDefaultPermissions(user.id))
         } else {
-          setPermissions(moduleData || [])
+          setPermissions(moduleData)
         }
 
         // Fetch fundo permissions
@@ -88,15 +88,45 @@ export function useUserPermissions() {
     }
 
     fetchPermissions()
-  }, [user?.id])
+  }, [user?.id, profile?.rol])
 
   const getDefaultPermissions = (userId: string): ModulePermission[] => {
-    // This would be replaced by actually checking the user's role from profiles table
-    // For now, return basic permissions
-    return [
+    const role = profile?.rol || 'usuario'
+    const basePermissions: ModulePermission[] = [
       { module_name: 'dashboard', can_read: true, can_write: false, can_delete: false },
-      { module_name: 'guias', can_read: true, can_write: false, can_delete: false }
     ]
+
+    switch (role) {
+      case 'admin':
+        return [
+          ...basePermissions,
+          { module_name: 'admin', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'usuarios', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'fundos', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'lotes', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'camiones', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'guias', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'campo', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'acopio', can_read: true, can_write: true, can_delete: true },
+          { module_name: 'packing', can_read: true, can_write: true, can_delete: true },
+        ]
+      case 'operador':
+        return [
+          ...basePermissions,
+          { module_name: 'fundos', can_read: true, can_write: true, can_delete: false },
+          { module_name: 'lotes', can_read: true, can_write: true, can_delete: false },
+          { module_name: 'camiones', can_read: true, can_write: true, can_delete: false },
+          { module_name: 'guias', can_read: true, can_write: true, can_delete: false },
+          { module_name: 'campo', can_read: true, can_write: true, can_delete: false },
+          { module_name: 'acopio', can_read: true, can_write: true, can_delete: false },
+          { module_name: 'packing', can_read: true, can_write: true, can_delete: false },
+        ]
+      default: // usuario
+        return [
+          ...basePermissions,
+          { module_name: 'guias', can_read: true, can_write: false, can_delete: false },
+        ]
+    }
   }
 
   const hasPermission = (moduleName: string, permission: 'read' | 'write' | 'delete' = 'read'): boolean => {
