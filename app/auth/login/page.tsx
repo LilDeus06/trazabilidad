@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { Truck, Loader2, AlertTriangle } from "lucide-react"
+import { Truck, Loader2, AlertTriangle, Grape } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -113,12 +113,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-6">
+    <div className="min-h-screen w-full relative bg-black bg-gradient-to-br">
+      {/* Northern Aurora */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: `
+          radial-gradient(ellipse 70% 55% at 50% 50%, rgba(255, 20, 147, 0.15), transparent 50%),
+          radial-gradient(ellipse 160% 130% at 10% 10%, rgba(0, 255, 255, 0.12), transparent 60%),
+          radial-gradient(ellipse 160% 130% at 90% 90%, rgba(138, 43, 226, 0.18), transparent 65%),
+          radial-gradient(ellipse 110% 50% at 80% 30%, rgba(255, 215, 0, 0.08), transparent 40%),
+          #000000
+          `,
+        }}
+      />
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2 mb-4">
             <div className="flex items-center gap-2">
-              <Truck className="h-8 w-8 text-primary" />
+              <Grape className="h-8 w-8 text-primary" />
               <h1 className="text-2xl font-bold text-foreground">UvaTracer</h1>
             </div>
             <p className="text-sm text-muted-foreground text-center">Sistema de Gestión Logística GLOBAL</p>
@@ -198,5 +213,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  </div>
   )
 }

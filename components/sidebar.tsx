@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Truck, Users, FileText, Wheat, Package, PackageCheck, Menu, X, LogOut, Home, Shield, User, MapPin, Grid3X3 } from "lucide-react"
+import { Truck, Users, FileText, Wheat, Package, PackageCheck, Menu, X, LogOut, Home, Shield, User, MapPin, Grid3X3, Grape } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/lib/contexts/user-context"
@@ -169,7 +169,7 @@ export function Sidebar({ userRole = "usuario" }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center gap-2 p-6 border-b border-sidebar-border">
-            <Truck className="h-8 w-8 text-sidebar-primary" />
+            <Grape className="h-8 w-8 text-sidebar-primary" />
             <div>
               <h1 className="text-xl font-bold text-sidebar-foreground">UvaTracer</h1>
               <p className="text-xs text-sidebar-foreground/60">Gestión Información</p>
