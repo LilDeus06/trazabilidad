@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import { ConnectionStatus } from "@/components/connection-status"
 import "./globals.css"
 
+
 export const metadata: Metadata = {
   title: "Sistema de Gestión Logística",
   description: "Sistema completo de gestión logística agrícola",
