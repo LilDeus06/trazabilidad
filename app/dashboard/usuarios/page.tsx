@@ -39,12 +39,13 @@ export default async function UsuariosPage() {
           <h1 className="text-3xl font-bold text-foreground">Gestión de Usuarios</h1>
           <p className="text-muted-foreground">Administra los usuarios y roles del sistema</p>
         </div>
-        <Button asChild>
-          <Link href="/auth/register">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Usuario
-          </Link>
-        </Button>
+          {/* <Button asChild>
+            <Link 
+              href="/auth/register">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Usuario
+            </Link>
+          </Button> */}
       </div>
 
       <UsuariosTable usuarios={usuarios || []} />

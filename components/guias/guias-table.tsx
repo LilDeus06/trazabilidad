@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
-import { MoreHorizontal, Edit, Trash2, Search, FileText, Calendar, Truck } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Search, FileText, Calendar, Truck, Download } from "lucide-react"
 import Link from "next/link"
 import { formatDateTimePeru, formatDatePeru } from "@/lib/utils/date"
 
@@ -28,6 +28,7 @@ interface Guia {
   fecha_hora: string
   id_camion: string
   id_fundo: string
+  id_lotes: string[] | null
   enviadas: number
   guias: string
   usuario_id: string
@@ -43,6 +44,12 @@ interface Guia {
   fundos: {
     nombre: string
   } | null
+  lotes?: {
+    id: string
+    nombre: string
+    cantidad: number
+    variedad: string
+  }[]
 }
 
 interface UserProfile {
@@ -109,6 +116,13 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
     return guias.filter((g) => new Date(g.fecha_hora).toISOString().startsWith(todayInPeru)).length
   }
 
+  const handleExport = () => {
+    const url = dateFilter
+      ? `/api/guias/export?date=${dateFilter}`
+      : '/api/guias/export'
+    window.open(url, '_blank')
+  }
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-4 mb-6">
@@ -164,6 +178,15 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
             </div>
             <div className="flex items-center gap-2">
               <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-40" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Exportar Excel
+              </Button>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -196,6 +219,7 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                     <TableHead>Camión</TableHead>
                     <TableHead>Chofer</TableHead>
                     <TableHead>Fundo</TableHead>
+                    <TableHead>Lotes</TableHead>
                     <TableHead>Guía</TableHead>
                     <TableHead>Jabas Enviadas</TableHead>
                     <TableHead>Usuario</TableHead>
@@ -224,6 +248,29 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                       </TableCell>
                       <TableCell className="font-medium">{guia.camiones.chofer}</TableCell>
                       <TableCell className="font-medium">{guia.camiones.fundos?.nombre || 'N/A'}</TableCell>
+                      <TableCell>
+                        {guia.lotes && guia.lotes.length > 0 ? (
+                          <div className="space-y-1">
+                            {guia.lotes.map((lote) => (
+                              <div key={lote.id} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {lote.nombre}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {lote.cantidad} jabas
+                                  </span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {lote.variedad || 'Sin variedad'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Sin lotes</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
                           {guia.guias}

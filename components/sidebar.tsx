@@ -171,7 +171,7 @@ export function Sidebar({ userRole = "usuario" }: SidebarProps) {
           <div className="flex items-center gap-2 p-6 border-b border-sidebar-border">
             <Grape className="h-8 w-8 text-sidebar-primary" />
             <div>
-              <h1 className="text-xl font-bold text-sidebar-foreground">UvaTracer</h1>
+              <h1 className="sidebar-title text-xl font-bold text-sidebar-foreground">UvaTracer</h1>
               <p className="text-xs text-sidebar-foreground/60">Gestión Información</p>
             </div>
           </div>

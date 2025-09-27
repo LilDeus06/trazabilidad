@@ -31,6 +31,20 @@ export default async function EditGuiaPage({ params }: EditGuiaPageProps) {
     notFound()
   }
 
+  // Obtener cantidades de lotes si existen
+  const { data: guiaLotes } = await supabase
+    .from("guia_lotes")
+    .select("lote_id, cantidad")
+    .eq("guia_id", id)
+
+  // Convertir a loteQuantities
+  const loteQuantities: Record<string, number> = {}
+  guiaLotes?.forEach(gl => {
+    loteQuantities[gl.lote_id] = gl.cantidad
+  })
+
+  const guiaWithQuantities = { ...guia, loteQuantities }
+
   // Obtener camiones activos
   const { data: camiones, error: camionesError } = await supabase
     .from("camiones")
@@ -60,7 +74,7 @@ export default async function EditGuiaPage({ params }: EditGuiaPageProps) {
         <p className="text-muted-foreground">Modifica la información de la guía</p>
       </div>
 
-      <GuiaForm camiones={camiones || []} lotes={lotes || []} guia={guia} />
+      <GuiaForm camiones={camiones || []} lotes={lotes || []} guia={guiaWithQuantities} />
     </div>
   )
 }

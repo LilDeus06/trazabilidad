@@ -11,6 +11,7 @@ interface UserProfile {
   avatar_url?: string
   email?: string
   rol?: string
+  _updated?: number
 }
 
 interface UserContextType {
@@ -108,7 +109,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
       // Cache the profile
       saveUserToCache(profileData)
-      setProfile(profileData)
+      setProfile({ ...profileData, _updated: Date.now() })
       return profileData
     } catch (error) {
       console.error('[v0] Error in loadProfile:', error)

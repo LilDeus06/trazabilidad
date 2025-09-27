@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { ConnectionStatus } from "@/components/connection-status"
+import { GlobalGsap } from "@/components/animations/global-gsap"
 import "./globals.css"
 
 
@@ -21,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${GeistSans.variable} ${GeistMono.variable} dark`}>
       <body className="font-sans">
+        <GlobalGsap />
         <ConnectionStatus />
         <Suspense fallback={<div>Loading...</div>}>
           {children}

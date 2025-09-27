@@ -37,6 +37,37 @@ export default async function GuiasPage() {
     `)
     .order("fecha_hora", { ascending: false })
 
+  // Obtener lotes y cantidades para cada guía
+  const guiasWithLotes = await Promise.all(
+    (guias || []).map(async (guia) => {
+      if (guia.id_lotes && guia.id_lotes.length > 0) {
+        // Get lotes info
+        const { data: lotes } = await supabase
+          .from("lotes")
+          .select("id, nombre, variedad")
+          .in("id", guia.id_lotes)
+
+        // Get quantities from guia_lotes
+        const { data: guiaLotes } = await supabase
+          .from("guia_lotes")
+          .select("lote_id, cantidad")
+          .eq("guia_id", guia.id)
+
+        // Combine lotes with quantities
+        const lotesWithQuantities = (lotes || []).map(lote => {
+          const guiaLote = guiaLotes?.find(gl => gl.lote_id === lote.id)
+          return {
+            ...lote,
+            cantidad: guiaLote?.cantidad || (guia.id_lotes.length === 1 ? guia.enviadas : 0)
+          }
+        })
+
+        return { ...guia, lotes: lotesWithQuantities }
+      }
+      return { ...guia, lotes: [] }
+    })
+  )
+
   if (error) {
     console.error("Error fetching guias:", error)
   }
@@ -65,7 +96,7 @@ export default async function GuiasPage() {
         </Button>
       </div>
 
-      <GuiasTable guias={guias || []} userRole={profile?.rol || "usuario"} userMap={userMap} />
+      <GuiasTable guias={guiasWithLotes} userRole={profile?.rol || "usuario"} userMap={userMap} />
     </div>
   )
 }

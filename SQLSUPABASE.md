@@ -92,9 +92,13 @@ CREATE TABLE public.guias (
   guias text NOT NULL,
   usuario_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  id_fundo uuid NOT NULL,
+  id_lote uuid,
   CONSTRAINT guias_pkey PRIMARY KEY (id),
   CONSTRAINT guias_id_camion_fkey FOREIGN KEY (id_camion) REFERENCES public.camiones(id),
-  CONSTRAINT guias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id)
+  CONSTRAINT guias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id),
+  CONSTRAINT guias_id_fundo_fkey FOREIGN KEY (id_fundo) REFERENCES public.fundos(id),
+  CONSTRAINT guias_id_lote_fkey FOREIGN KEY (id_lote) REFERENCES public.lotes(id)
 );
 CREATE TABLE public.lotes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, ArrowLeft, FileText, Truck, AlertCircle } from "lucide-react"
+import { Loader2, ArrowLeft, FileText, Truck, AlertCircle, Check } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import Link from "next/link"
 
 interface Camion {
@@ -32,7 +33,8 @@ interface Guia {
   fecha_hora: string
   id_camion: string
   id_fundo?: string
-  id_lote?: string
+  id_lotes?: string[]
+  loteQuantities?: Record<string, number>
   enviadas: number
   guias: string
 }
@@ -57,7 +59,8 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
   const [formData, setFormData] = useState({
     fecha_hora: guia?.fecha_hora ? getLocalISOString(new Date(guia.fecha_hora)) : getLocalISOString(new Date()),
     id_camion: guia?.id_camion || "",
-    id_lote: guia?.id_lote || "",
+    id_lotes: guia?.id_lotes || [],
+    loteQuantities: guia?.loteQuantities || {} as Record<string, number>,
     enviadas: guia?.enviadas || 0,
     guias: guia?.guias || "",
   })
@@ -75,14 +78,16 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
   }, [formData.id_camion, camiones])
 
   useEffect(() => {
-    // Reset id_lote if it doesn't belong to the selected camión's fundo
-    if (formData.id_lote && selectedCamion) {
-      const isCompatible = filteredLotes.some((l) => l.id === formData.id_lote)
-      if (!isCompatible) {
-        setFormData((prev) => ({ ...prev, id_lote: "" }))
+    // Reset id_lotes if they don't belong to the selected camión's fundo
+    if (formData.id_lotes.length > 0 && selectedCamion) {
+      const compatibleLotes = formData.id_lotes.filter((loteId) =>
+        filteredLotes.some((l) => l.id === loteId)
+      )
+      if (compatibleLotes.length !== formData.id_lotes.length) {
+        setFormData((prev) => ({ ...prev, id_lotes: compatibleLotes }))
       }
     }
-  }, [selectedCamion, formData.id_lote, filteredLotes])
+  }, [selectedCamion, formData.id_lotes, filteredLotes])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,22 +107,41 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
         fecha_hora: new Date(formData.fecha_hora).toISOString(),
         id_camion: formData.id_camion,
         id_fundo: selectedCamion?.id_fundo,
-        id_lote: formData.id_lote || null,
+        id_lotes: formData.id_lotes.length > 0 ? formData.id_lotes : null,
         enviadas: formData.enviadas,
         guias: formData.guias,
         usuario_id: user.id,
       }
+
+      let guiaId = guia?.id
 
       if (guia?.id) {
         // Actualizar guía existente
         const { error } = await supabase.from("guias").update(guiaData).eq("id", guia.id)
 
         if (error) throw error
+
+        // Delete existing guia_lotes and insert new ones
+        await supabase.from("guia_lotes").delete().eq("guia_id", guia.id)
       } else {
         // Crear nueva guía
-        const { error } = await supabase.from("guias").insert(guiaData)
+        const { data, error } = await supabase.from("guias").insert(guiaData).select("id").single()
 
         if (error) throw error
+        guiaId = data.id
+      }
+
+      // Insert guia_lotes if multiple lotes
+      if (formData.id_lotes.length > 1 && guiaId) {
+        const guiaLotesData = formData.id_lotes.map(loteId => ({
+          guia_id: guiaId,
+          lote_id: loteId,
+          cantidad: formData.loteQuantities[loteId] || 0
+        }))
+
+        const { error: loteError } = await supabase.from("guia_lotes").insert(guiaLotesData)
+
+        if (loteError) throw loteError
       }
 
       router.push("/dashboard/guias")
@@ -198,29 +222,89 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="id_lote">Lote</Label>
-                    <Select
-                      value={formData.id_lote}
-                      onValueChange={(value) => setFormData({ ...formData, id_lote: value })}
-                      disabled={filteredLotes.length === 0}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={selectedCamion ? "Selecciona un lote" : "Selecciona un camión primero"} />
-                      </SelectTrigger>
-                      <SelectContent>
+                  <Label>Lotes</Label>
+                  {selectedCamion ? (
+                    filteredLotes.length > 0 ? (
+                      <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
                         {filteredLotes.map((lote) => (
-                          <SelectItem key={lote.id} value={lote.id}>
-                            {lote.nombre}
-                          </SelectItem>
+                          <div key={lote.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`lote-${lote.id}`}
+                              checked={formData.id_lotes.includes(lote.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    id_lotes: [...prev.id_lotes, lote.id]
+                                  }))
+                                } else {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    id_lotes: prev.id_lotes.filter(id => id !== lote.id)
+                                  }))
+                                }
+                              }}
+                            />
+                            <Label
+                              htmlFor={`lote-${lote.id}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {lote.nombre}
+                            </Label>
+                          </div>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedCamion && filteredLotes.length === 0 && (
-                      <div className="text-xs text-muted-foreground">
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-3 border rounded-md">
                         No hay lotes activos disponibles para el fundo del camión seleccionado.
                       </div>
-                    )}
+                    )
+                  ) : (
+                    <div className="text-sm text-muted-foreground p-3 border rounded-md">
+                      Selecciona un camión primero
+                    </div>
+                  )}
+                  {formData.id_lotes.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {formData.id_lotes.length} lote{formData.id_lotes.length > 1 ? 's' : ''} seleccionado{formData.id_lotes.length > 1 ? 's' : ''}
+                    </div>
+                  )}
                 </div>
+
+                {formData.id_lotes.length > 1 && (
+                  <div className="space-y-2">
+                    <Label>Cantidades por Lote</Label>
+                    <div className="space-y-2">
+                      {formData.id_lotes.map((loteId) => {
+                        const lote = filteredLotes.find(l => l.id === loteId)
+                        return (
+                          <div key={loteId} className="flex items-center gap-2">
+                            <Label className="w-32 text-sm">{lote?.nombre || 'Lote'}</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              min="0"
+                              value={formData.loteQuantities[loteId] || ""}
+                              onChange={(e) => {
+                                const value = Number.parseInt(e.target.value) || 0
+                                setFormData(prev => ({
+                                  ...prev,
+                                  loteQuantities: { ...prev.loteQuantities, [loteId]: value },
+                                  enviadas: Object.values({ ...prev.loteQuantities, [loteId]: value }).reduce((sum, qty) => sum + (qty || 0), 0)
+                                }))
+                              }}
+                              className="w-24"
+                            />
+                            <span className="text-sm text-muted-foreground">jabas</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total: {formData.enviadas} jabas
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">

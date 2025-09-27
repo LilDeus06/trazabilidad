@@ -131,7 +131,7 @@ export default function LoginPage() {
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-2 mb-4">
+          <div className="flex flex-col items-center gap-2 mb-4 gsap-fade">
             <div className="flex items-center gap-2">
               <Grape className="h-8 w-8 text-primary" />
               <h1 className="text-2xl font-bold text-foreground">UvaTracer</h1>
@@ -139,7 +139,7 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground text-center">Sistema de Gestión Logística GLOBAL</p>
           </div>
 
-          <Card className="border-border/50 shadow-lg">
+          <Card className="border-border/50 shadow-lg gsap-card">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl text-center">Iniciar Sesión</CardTitle>
               <CardDescription className="text-center">
@@ -200,9 +200,10 @@ export default function LoginPage() {
                 </div>
                 <div className="mt-4 text-center text-sm">
                   ¿No tienes cuenta?{" "}
-                  <Link
-                    href="/auth/register"
-                    className="text-primary hover:text-primary/80 underline underline-offset-4"
+                  <Link target="_blank"
+                    href="https://wa.me/+51938438156"
+                    //href="/auth/register"
+                    className=" text-primary hover:text-primary/80 underline underline-offset-4"
                   >
                     Contacta al administrador
                   </Link>

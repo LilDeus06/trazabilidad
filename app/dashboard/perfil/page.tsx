@@ -11,7 +11,7 @@ import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/lib/contexts/user-context"
-import { Loader2, Save, User, Mail, Calendar, Shield } from "lucide-react"
+import { Loader2, Save, User, Mail, Calendar, Shield, RefreshCw } from "lucide-react"
 import { LoadingWrapper } from "@/components/loading-wrapper"
 
 interface Profile {
@@ -29,6 +29,7 @@ export default function PerfilPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
@@ -119,6 +120,14 @@ export default function PerfilPage() {
       console.log("[v0] Perfil actualizado exitosamente")
       setProfile((prev) => (prev ? { ...prev, nombre: formData.nombre, apellido: formData.apellido } : null))
 
+      // Refresh the user context cache to update sidebar and other components
+      try {
+        await refreshProfile()
+        console.log("[v0] User context cache refreshed after profile update")
+      } catch (error) {
+        console.warn("[v0] Error refreshing user context after profile update:", error)
+      }
+
       toast({
         title: "Éxito",
         description: "Perfil actualizado correctamente",
@@ -132,6 +141,28 @@ export default function PerfilPage() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    try {
+      console.log("[v0] Refreshing profile manually")
+      setRefreshing(true)
+      await loadProfile()
+      await refreshProfile()
+      toast({
+        title: "Éxito",
+        description: "Perfil actualizado desde la base de datos",
+      })
+    } catch (error) {
+      console.error("[v0] Error refreshing profile:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el perfil",
+        variant: "destructive",
+      })
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -184,9 +215,29 @@ export default function PerfilPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center space-x-2">
-        <User className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Mi Perfil</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <User className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">Mi Perfil</h1>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Actualizando...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Actualizar
+            </>
+          )}
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

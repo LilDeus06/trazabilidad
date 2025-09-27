@@ -32,10 +32,10 @@ function DashboardContent({
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar userRole={profile?.rol || "usuario"} />
+      <Sidebar key={profile?._updated} userRole={profile?.rol || "usuario"} />
       <main className="flex-1 md:ml-64 overflow-auto">
         <DatabaseStatus />
-        <div className="p-6 pt-16 md:pt-6">{children}</div>
+        <div className="p-6 pt-16 md:pt-6 gsap-stagger">{children}</div>
       </main>
     </div>
   )
