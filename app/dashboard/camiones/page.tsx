@@ -15,10 +15,20 @@ export default async function CamionesPage() {
     redirect("/auth/login")
   }
 
-  // Verificar rol del usuario
+  // Verificar permisos del usuario para el módulo camiones
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_read, can_write, can_delete")
+    .eq("user_id", user.id)
+    .eq("module_name", "camiones")
+    .single()
+
+  // Si no tiene permisos específicos, verificar rol por defecto
   const { data: profile } = await supabase.from("profiles").select("rol").eq("id", user.id).single()
 
-  if (!profile || !["admin", "operador"].includes(profile.rol)) {
+  const hasReadPermission = permissions?.can_read || (profile?.rol && ["admin", "operador"].includes(profile.rol))
+
+  if (!hasReadPermission) {
     redirect("/dashboard")
   }
 
@@ -50,7 +60,7 @@ export default async function CamionesPage() {
           <h1 className="text-3xl font-bold text-foreground">Gestión de Camiones</h1>
           <p className="text-muted-foreground">Administra la flota de camiones del sistema</p>
         </div>
-        {profile.rol === "admin" && (
+        {(permissions?.can_write || profile?.rol === "admin") && (
           <Button asChild>
             <Link href="/dashboard/camiones/nuevo">
               <Plus className="mr-2 h-4 w-4" />
@@ -60,7 +70,7 @@ export default async function CamionesPage() {
         )}
       </div>
 
-      <CamionesTable camiones={camiones || []} userRole={profile.rol} />
+      <CamionesTable camiones={camiones || []} permissions={permissions} userRole={profile?.rol || "usuario"} />
     </div>
   )
 }

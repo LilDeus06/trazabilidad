@@ -1,4 +1,4 @@
- import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { GuiasTable } from "@/components/guias/guias-table"
 import { Button } from "@/components/ui/button"
@@ -15,8 +15,22 @@ export default async function GuiasPage() {
     redirect("/auth/login")
   }
 
-  // Obtener perfil del usuario
+  // Verificar permisos del usuario para el módulo guias
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_read, can_write, can_delete")
+    .eq("user_id", user.id)
+    .eq("module_name", "guias")
+    .single()
+
+  // Si no tiene permisos específicos, verificar rol por defecto
   const { data: profile } = await supabase.from("profiles").select("rol").eq("id", user.id).single()
+
+  const hasPermission = permissions?.can_read || (profile?.rol && ["admin", "usuario", "operador"].includes(profile.rol))
+
+  if (!hasPermission) {
+    redirect("/dashboard")
+  }
 
   // Obtener guías con información del camión y fundo
   const { data: guias, error } = await supabase
@@ -88,15 +102,17 @@ export default async function GuiasPage() {
           <h1 className="text-3xl font-bold text-foreground">Registro de Guías</h1>
           <p className="text-muted-foreground">Control de salidas y despachos de camiones</p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/guias/nueva">
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Guía
-          </Link>
-        </Button>
+        {(permissions?.can_write || profile?.rol === "admin" || profile?.rol === "usuario" || profile?.rol === "operador") && (
+          <Button asChild>
+            <Link href="/dashboard/guias/nueva">
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva Guía
+            </Link>
+          </Button>
+        )}
       </div>
 
-      <GuiasTable guias={guiasWithLotes} userRole={profile?.rol || "usuario"} userMap={userMap} />
+      <GuiasTable guias={guiasWithLotes} userRole={profile?.rol || "usuario"} userMap={userMap} permissions={permissions} />
     </div>
   )
 }

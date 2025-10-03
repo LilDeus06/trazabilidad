@@ -16,14 +16,24 @@ export default async function RecoleccionPage() {
     redirect("/auth/login")
   }
 
-  // Verificar rol del usuario
+  // Verificar permisos del usuario para el módulo campo
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_read, can_write, can_delete")
+    .eq("user_id", user.id)
+    .eq("module_name", "campo")
+    .single()
+
+  // Si no tiene permisos específicos, verificar rol por defecto
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("rol")
     .eq("id", user.id)
     .single()
 
-  if (profileError || !profile || !["admin", "operador"].includes(profile.rol)) {
+  const hasPermission = permissions?.can_read || (profile && ["admin", "operador"].includes(profile.rol))
+
+  if (profileError || !hasPermission) {
     redirect("/dashboard")
   }
 
@@ -68,7 +78,7 @@ export default async function RecoleccionPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <RecoleccionForm userId={user.id} />
         <div className="lg:col-span-2">
-          <RecoleccionTable recolecciones={recolecciones || []} userRole={profile.rol} />
+          <RecoleccionTable recolecciones={recolecciones || []} userRole={profile.rol} permissions={permissions} />
         </div>
       </div>
     </div>

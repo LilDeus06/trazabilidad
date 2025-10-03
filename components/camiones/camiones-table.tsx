@@ -46,9 +46,14 @@ interface Camion {
 interface CamionesTableProps {
   camiones: Camion[]
   userRole: string
+  permissions?: {
+    can_read: boolean
+    can_write: boolean
+    can_delete: boolean
+  } | null
 }
 
-export function CamionesTable({ camiones, userRole }: CamionesTableProps) {
+export function CamionesTable({ camiones, userRole, permissions }: CamionesTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -140,7 +145,7 @@ export function CamionesTable({ camiones, userRole }: CamionesTableProps) {
                     <TableHead>Capacidad</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Fecha Registro</TableHead>
-                    {userRole === "admin" && <TableHead className="w-[70px]">Acciones</TableHead>}
+                    {(permissions?.can_write || permissions?.can_delete || userRole === "admin") && <TableHead className="w-[70px]">Acciones</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -166,7 +171,7 @@ export function CamionesTable({ camiones, userRole }: CamionesTableProps) {
                         </Badge>
                       </TableCell>
                       <TableCell>{new Date(camion.created_at).toLocaleDateString("es-ES")}</TableCell>
-                      {userRole === "admin" && (
+                      {(permissions?.can_write || permissions?.can_delete || userRole === "admin") && (
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -175,19 +180,25 @@ export function CamionesTable({ camiones, userRole }: CamionesTableProps) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/camiones/${camion.id}/editar`}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => toggleStatus(camion.id, camion.activo)}>
-                                {camion.activo ? "Desactivar" : "Activar"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(camion.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                              </DropdownMenuItem>
+                              {(permissions?.can_write || userRole === "admin") && (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/dashboard/camiones/${camion.id}/editar`}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              {(permissions?.can_write || userRole === "admin") && (
+                                <DropdownMenuItem onClick={() => toggleStatus(camion.id, camion.activo)}>
+                                  {camion.activo ? "Desactivar" : "Activar"}
+                                </DropdownMenuItem>
+                              )}
+                              {(permissions?.can_delete || userRole === "admin") && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(camion.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

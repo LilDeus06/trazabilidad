@@ -62,9 +62,14 @@ interface GuiasTableProps {
   guias: Guia[]
   userRole: string
   userMap: Map<string, UserProfile>
+  permissions?: {
+    can_read: boolean
+    can_write: boolean
+    can_delete: boolean
+  } | null
 }
 
-export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
+export function GuiasTable({ guias, userRole, userMap, permissions }: GuiasTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [dateFilter, setDateFilter] = useState("")
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -223,7 +228,7 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                     <TableHead>Guía</TableHead>
                     <TableHead>Jabas Enviadas</TableHead>
                     <TableHead>Usuario</TableHead>
-                    {userRole === "admin" && <TableHead className="w-[70px]">Acciones</TableHead>}
+                    {(permissions?.can_write || permissions?.can_delete || userRole === "admin") && <TableHead className="w-[70px]">Acciones</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -293,9 +298,15 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {userMap.get(guia.usuario_id) ? `${userMap.get(guia.usuario_id)?.nombre} ${userMap.get(guia.usuario_id)?.apellido}` : guia.usuario_id}
-                      </TableCell>
-                      {userRole === "admin" && (
+                          {
+                            userMap.get(guia.usuario_id) 
+                              ? `${userMap.get(guia.usuario_id)?.nombre} ${userMap.get(guia.usuario_id)?.apellido}` 
+                              : guia.usuario_id.length > 35 
+                                ? "Sistema" 
+                                : guia.usuario_id
+                          }
+                        </TableCell>
+                      {(permissions?.can_write || permissions?.can_delete || userRole === "admin") && (
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -304,16 +315,20 @@ export function GuiasTable({ guias, userRole, userMap }: GuiasTableProps) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/guias/${guia.id}/editar`}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(guia.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                              </DropdownMenuItem>
+                              {(permissions?.can_write || userRole === "admin") && (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/dashboard/guias/${guia.id}/editar`}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              {(permissions?.can_delete || userRole === "admin") && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(guia.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

@@ -42,11 +42,16 @@ interface Recoleccion {
 interface RecoleccionTableProps {
   recolecciones: Recoleccion[]
   userRole: string
+  permissions?: {
+    can_read: boolean
+    can_write: boolean
+    can_delete: boolean
+  } | null
   onEdit?: (recoleccion: Recoleccion) => void
   onView?: (recoleccion: Recoleccion) => void
 }
 
-export function RecoleccionTable({ recolecciones, userRole, onEdit, onView }: RecoleccionTableProps) {
+export function RecoleccionTable({ recolecciones, userRole, permissions, onEdit, onView }: RecoleccionTableProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const supabase = createClient()
 
@@ -116,12 +121,12 @@ export function RecoleccionTable({ recolecciones, userRole, onEdit, onView }: Re
                     <Button variant="ghost" size="sm" onClick={() => onView?.(recoleccion)}>
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {(userRole === "admin" || userRole === "operador") && (
+                    {(permissions?.can_write || userRole === "admin" || userRole === "operador") && (
                       <Button variant="ghost" size="sm" onClick={() => onEdit?.(recoleccion)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {userRole === "admin" && (
+                    {(permissions?.can_delete || userRole === "admin") && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">

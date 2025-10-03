@@ -21,14 +21,24 @@ export default async function RecepcionPage() {
     redirect("/auth/login")
   }
 
-  // Verificar rol del usuario
+  // Verificar permisos del usuario para el módulo acopio
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_read")
+    .eq("user_id", user.id)
+    .eq("module_name", "acopio")
+    .single()
+
+  // Si no tiene permisos específicos, verificar rol por defecto
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("rol")
     .eq("id", user.id)
     .single()
 
-  if (!profile || profileError || !["admin", "operador"].includes(profile.rol)) {
+  const hasPermission = permissions?.can_read || (profile && ["admin", "operador"].includes(profile.rol))
+
+  if (profileError || !hasPermission) {
     redirect("/dashboard")
   }
 

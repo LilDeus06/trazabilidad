@@ -69,12 +69,86 @@ export function UserProvider({ children }: UserProviderProps) {
     }
   }
 
-  const loadProfile = async (userId: string, forceRefresh: boolean = false): Promise<UserProfile | null> => {
+  const fetchProfileFromDatabase = async (user: User): Promise<UserProfile | null> => {
+    const userId = user.id
+    try {
+      console.log('[v0] Fetching profile from database')
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nombre, apellido, avatar_url, rol')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        console.error('[v0] Error fetching profile:', error)
+        // Try to create profile if it doesn't exist
+        if (error.code === 'PGRST116') { // Row not found
+          console.log('[v0] Profile not found, creating new profile')
+
+          // Try to get name from user metadata
+          const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || ''
+          const [nombre, ...apellidoParts] = fullName.split(' ')
+          const apellido = apellidoParts.join(' ')
+
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              nombre: nombre || '',
+              apellido: apellido || '',
+              rol: 'usuario'
+            })
+            .select('id, nombre, apellido, avatar_url, rol')
+            .single()
+
+          if (insertError) {
+            console.error('[v0] Error creating profile:', insertError)
+            return null
+          }
+
+          const profileData = {
+            ...newProfile,
+            email: user?.email || ''
+          }
+
+          return profileData
+        } else {
+          return null
+        }
+      }
+
+      const profileData = {
+        ...data,
+        email: user?.email || ''
+      }
+
+      return profileData
+    } catch (error) {
+      console.error('[v0] Error in fetchProfileFromDatabase:', error)
+      return null
+    }
+  }
+
+  const loadProfile = async (user: User, forceRefresh: boolean = false): Promise<UserProfile | null> => {
+    const userId = user.id
     // Try cache first (unless force refresh)
     if (!forceRefresh) {
       const cached = loadUserFromCache()
-      if (cached.data && cached.data.id === userId && !cached.isExpired) {
+      if (cached.data && cached.data.id === userId) {
         setProfile(cached.data)
+        // If expired, load in background to update
+        if (cached.isExpired) {
+          console.log('[v0] Cache expired, updating in background')
+          // Load in background without setting profile again
+          fetchProfileFromDatabase(user).then(newProfile => {
+            if (newProfile) {
+              saveUserToCache(newProfile)
+              setProfile({ ...newProfile, _updated: Date.now() })
+            }
+          }).catch(error => {
+            console.error('[v0] Error updating profile in background:', error)
+          })
+        }
         return cached.data
       }
     }
@@ -90,16 +164,61 @@ export function UserProvider({ children }: UserProviderProps) {
 
       if (error) {
         console.error('[v0] Error loading profile:', error)
-        // If we have cached data (even expired), use it as fallback
-        const cached = loadUserFromCache()
-        if (cached.data && cached.data.id === userId) {
-          console.log('[v0] Using cached profile due to fetch error')
-          setProfile(cached.data)
-          return cached.data
+        // Try to create profile if it doesn't exist
+        if (error.code === 'PGRST116') { // Row not found
+          console.log('[v0] Profile not found, creating new profile')
+
+          // Try to get name from user metadata
+          const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || ''
+          const [nombre, ...apellidoParts] = fullName.split(' ')
+          const apellido = apellidoParts.join(' ')
+
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              nombre: nombre || '',
+              apellido: apellido || '',
+              rol: 'usuario'
+            })
+            .select('id, nombre, apellido, avatar_url, rol')
+            .single()
+
+          if (insertError) {
+            console.error('[v0] Error creating profile:', insertError)
+            // If we have cached data and not expired, use it as fallback
+            const cached = loadUserFromCache()
+            if (cached.data && cached.data.id === userId && !cached.isExpired) {
+              console.log('[v0] Using cached profile due to create error')
+              setProfile(cached.data)
+              return cached.data
+            }
+            // No valid cache available, clear and return null
+            localStorage.removeItem(CACHE_KEY)
+            return null
+          }
+
+          const profileData = {
+            ...newProfile,
+            email: user?.email || ''
+          }
+
+          // Cache the new profile
+          saveUserToCache(profileData)
+          setProfile({ ...profileData, _updated: Date.now() })
+          return profileData
+        } else {
+          // Other error, use cache if available
+          const cached = loadUserFromCache()
+          if (cached.data && cached.data.id === userId && !cached.isExpired) {
+            console.log('[v0] Using cached profile due to fetch error')
+            setProfile(cached.data)
+            return cached.data
+          }
+          // No valid cache available, clear and return null
+          localStorage.removeItem(CACHE_KEY)
+          return null
         }
-        // No cache available, clear and return null
-        localStorage.removeItem(CACHE_KEY)
-        return null
       }
 
       const profileData = {
@@ -113,14 +232,14 @@ export function UserProvider({ children }: UserProviderProps) {
       return profileData
     } catch (error) {
       console.error('[v0] Error in loadProfile:', error)
-      // If we have cached data (even expired), use it as fallback
+      // If we have cached data and not expired, use it as fallback
       const cached = loadUserFromCache()
-      if (cached.data && cached.data.id === userId) {
+      if (cached.data && cached.data.id === userId && !cached.isExpired) {
         console.log('[v0] Using cached profile due to fetch error')
         setProfile(cached.data)
         return cached.data
       }
-      // No cache available
+      // No valid cache available
       localStorage.removeItem(CACHE_KEY)
       return null
     }
@@ -130,7 +249,7 @@ export function UserProvider({ children }: UserProviderProps) {
     if (user) {
       console.log('[v0] Forcing profile refresh from cache')
       setIsLoading(true)
-      await loadProfile(user.id, true) // Force refresh from database
+      await loadProfile(user, true) // Force refresh from database
       setIsLoading(false)
     }
   }
@@ -147,13 +266,16 @@ export function UserProvider({ children }: UserProviderProps) {
         }
 
         setUser(authUser)
+        setIsLoading(false) // Set loading false after user is set
 
         if (authUser) {
-          await loadProfile(authUser.id)
+          // Load profile in background
+          loadProfile(authUser).catch(error => {
+            console.error('[v0] Error loading profile in background:', error)
+          })
         }
       } catch (error) {
         console.error('[v0] Error initializing user:', error)
-      } finally {
         setIsLoading(false)
       }
     }
@@ -165,14 +287,17 @@ export function UserProvider({ children }: UserProviderProps) {
       async (event, session) => {
         console.log('[v0] Auth state changed:', event)
         setUser(session?.user || null)
+        setIsLoading(false) // Set loading false immediately
 
         if (session?.user) {
-          await loadProfile(session.user.id)
+          // Load profile in background
+          loadProfile(session.user).catch(error => {
+            console.error('[v0] Error loading profile in background:', error)
+          })
         } else {
           setProfile(null)
           localStorage.removeItem(CACHE_KEY)
         }
-        setIsLoading(false)
       }
     )
 

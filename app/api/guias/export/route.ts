@@ -68,12 +68,23 @@ export async function GET(request: NextRequest) {
             .select('lote_id, cantidad')
             .eq('guia_id', guia.id)
 
+          // Check if guia_lotes has individual quantities that sum to guia.enviadas
+          const totalFromGuiaLotes = guiaLotes?.reduce((sum, gl) => sum + gl.cantidad, 0) || 0
+          const hasIndividualQuantities = totalFromGuiaLotes === guia.enviadas
+
           // Combine lotes with quantities
           const lotesWithQuantities = (lotes || []).map(lote => {
             const guiaLote = guiaLotes?.find(gl => gl.lote_id === lote.id)
+            let cantidad = guiaLote?.cantidad || 0
+
+            // If no individual quantities or they don't sum correctly, distribute the total
+            if (!hasIndividualQuantities || !guiaLote) {
+              cantidad = guia.id_lotes.length === 1 ? guia.enviadas : Math.floor(guia.enviadas / guia.id_lotes.length)
+            }
+
             return {
               ...lote,
-              cantidad: guiaLote?.cantidad || (guia.id_lotes.length === 1 ? guia.enviadas : 0)
+              cantidad
             }
           })
 
