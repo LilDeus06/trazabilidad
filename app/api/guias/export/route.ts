@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import * as XLSX from 'xlsx'
 import { formatDateTimePeru, formatDatePeru } from '@/lib/utils/date'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -49,7 +51,6 @@ export async function GET(request: NextRequest) {
     const { data: guias, error } = await query
 
     if (error) {
-      console.error('Error fetching guias for export:', error)
       return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
     }
 
@@ -180,7 +181,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Export error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

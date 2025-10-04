@@ -13,7 +13,6 @@ export function useSupabaseStatus() {
     const supabaseDebugger = SupabaseDebugger.getInstance()
 
     const checkConnection = async () => {
-      console.log("[v0] Verificando estado de conexión con Supabase...")
       setIsChecking(true)
       setLastError(null)
 
@@ -24,17 +23,14 @@ export function useSupabaseStatus() {
         const { data, error } = await supabase.from("profiles").select("id").limit(1)
 
         if (error) {
-          console.error("[v0] Error en verificación de conexión:", error)
           supabaseDebugger.log("error", "Error en verificación de conexión", error)
           setLastError(error.message)
           setIsConnected(false)
         } else {
-          console.log("[v0] Conexión con Supabase verificada exitosamente")
           supabaseDebugger.log("info", "Conexión con Supabase verificada exitosamente")
           setIsConnected(true)
         }
       } catch (error) {
-        console.error("[v0] Error crítico en verificación de conexión:", error)
         const errorMessage = error instanceof Error ? error.message : "Error desconocido"
         supabaseDebugger.log("error", "Error crítico en verificación de conexión", { error: errorMessage })
         setLastError(errorMessage)

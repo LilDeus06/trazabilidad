@@ -50,7 +50,6 @@ export async function updateSession(request: NextRequest) {
         .single()
 
       if (profileError) {
-        console.error('[Middleware] Error getting user profile:', profileError)
         // On profile error, redirect to login
         if (
           request.nextUrl.pathname !== "/" &&
@@ -70,7 +69,6 @@ export async function updateSession(request: NextRequest) {
       }
     }
   } catch (error) {
-    console.error('[Middleware] Error getting user:', error)
     // On error, redirect to login
     if (
       request.nextUrl.pathname !== "/" &&

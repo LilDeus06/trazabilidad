@@ -43,10 +43,8 @@ export function UserProvider({ children }: UserProviderProps) {
         const { data, timestamp } = JSON.parse(cached)
         const isExpired = Date.now() - timestamp >= CACHE_DURATION
         if (!isExpired) {
-          console.log('[v0] Loading user profile from cache')
           return { data, isExpired: false }
         } else {
-          console.log('[v0] Cache expired, will fetch from database')
           return { data, isExpired: true }
         }
       }
@@ -72,7 +70,6 @@ export function UserProvider({ children }: UserProviderProps) {
   const fetchProfileFromDatabase = async (user: User): Promise<UserProfile | null> => {
     const userId = user.id
     try {
-      console.log('[v0] Fetching profile from database')
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nombre, apellido, avatar_url, rol')
@@ -80,10 +77,8 @@ export function UserProvider({ children }: UserProviderProps) {
         .single()
 
       if (error) {
-        console.error('[v0] Error fetching profile:', error)
         // Try to create profile if it doesn't exist
         if (error.code === 'PGRST116') { // Row not found
-          console.log('[v0] Profile not found, creating new profile')
 
           // Try to get name from user metadata
           const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || ''
@@ -102,7 +97,6 @@ export function UserProvider({ children }: UserProviderProps) {
             .single()
 
           if (insertError) {
-            console.error('[v0] Error creating profile:', insertError)
             return null
           }
 
@@ -124,7 +118,6 @@ export function UserProvider({ children }: UserProviderProps) {
 
       return profileData
     } catch (error) {
-      console.error('[v0] Error in fetchProfileFromDatabase:', error)
       return null
     }
   }
@@ -138,7 +131,6 @@ export function UserProvider({ children }: UserProviderProps) {
         setProfile(cached.data)
         // If expired, load in background to update
         if (cached.isExpired) {
-          console.log('[v0] Cache expired, updating in background')
           // Load in background without setting profile again
           fetchProfileFromDatabase(user).then(newProfile => {
             if (newProfile) {
@@ -146,7 +138,7 @@ export function UserProvider({ children }: UserProviderProps) {
               setProfile({ ...newProfile, _updated: Date.now() })
             }
           }).catch(error => {
-            console.error('[v0] Error updating profile in background:', error)
+            // Error updating profile in background
           })
         }
         return cached.data
@@ -155,7 +147,6 @@ export function UserProvider({ children }: UserProviderProps) {
 
     // Fetch from database
     try {
-      console.log('[v0] Loading user profile from database', forceRefresh ? '(forced refresh)' : '')
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nombre, apellido, avatar_url, rol')
@@ -163,10 +154,8 @@ export function UserProvider({ children }: UserProviderProps) {
         .single()
 
       if (error) {
-        console.error('[v0] Error loading profile:', error)
         // Try to create profile if it doesn't exist
         if (error.code === 'PGRST116') { // Row not found
-          console.log('[v0] Profile not found, creating new profile')
 
           // Try to get name from user metadata
           const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || ''
@@ -185,11 +174,9 @@ export function UserProvider({ children }: UserProviderProps) {
             .single()
 
           if (insertError) {
-            console.error('[v0] Error creating profile:', insertError)
             // If we have cached data and not expired, use it as fallback
             const cached = loadUserFromCache()
             if (cached.data && cached.data.id === userId && !cached.isExpired) {
-              console.log('[v0] Using cached profile due to create error')
               setProfile(cached.data)
               return cached.data
             }
@@ -211,7 +198,6 @@ export function UserProvider({ children }: UserProviderProps) {
           // Other error, use cache if available
           const cached = loadUserFromCache()
           if (cached.data && cached.data.id === userId && !cached.isExpired) {
-            console.log('[v0] Using cached profile due to fetch error')
             setProfile(cached.data)
             return cached.data
           }
@@ -231,11 +217,9 @@ export function UserProvider({ children }: UserProviderProps) {
       setProfile({ ...profileData, _updated: Date.now() })
       return profileData
     } catch (error) {
-      console.error('[v0] Error in loadProfile:', error)
       // If we have cached data and not expired, use it as fallback
       const cached = loadUserFromCache()
       if (cached.data && cached.data.id === userId && !cached.isExpired) {
-        console.log('[v0] Using cached profile due to fetch error')
         setProfile(cached.data)
         return cached.data
       }
@@ -247,7 +231,6 @@ export function UserProvider({ children }: UserProviderProps) {
 
   const refreshProfile = async () => {
     if (user) {
-      console.log('[v0] Forcing profile refresh from cache')
       setIsLoading(true)
       await loadProfile(user, true) // Force refresh from database
       setIsLoading(false)
@@ -260,7 +243,6 @@ export function UserProvider({ children }: UserProviderProps) {
         const { data: { user: authUser }, error } = await supabase.auth.getUser()
 
         if (error) {
-          console.error('[v0] Error getting user:', error)
           setIsLoading(false)
           return
         }
@@ -271,11 +253,10 @@ export function UserProvider({ children }: UserProviderProps) {
         if (authUser) {
           // Load profile in background
           loadProfile(authUser).catch(error => {
-            console.error('[v0] Error loading profile in background:', error)
+            // Error loading profile in background
           })
         }
       } catch (error) {
-        console.error('[v0] Error initializing user:', error)
         setIsLoading(false)
       }
     }
@@ -285,14 +266,13 @@ export function UserProvider({ children }: UserProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[v0] Auth state changed:', event)
         setUser(session?.user || null)
         setIsLoading(false) // Set loading false immediately
 
         if (session?.user) {
           // Load profile in background
           loadProfile(session.user).catch(error => {
-            console.error('[v0] Error loading profile in background:', error)
+            // Error loading profile in background
           })
         } else {
           setProfile(null)

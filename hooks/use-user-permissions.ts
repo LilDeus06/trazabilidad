@@ -32,21 +32,18 @@ export function useUserPermissions() {
 
       // Set a timeout to prevent infinite loading
       const timeoutId = setTimeout(() => {
-        console.warn('[v0] Permissions fetch timeout, using defaults')
         setPermissions(getDefaultPermissions(user.id))
         setFundoPermissions([])
         setLoading(false)
       }, 10000) // 10 second timeout
 
       try {
-        console.log('[v0] Fetching user module permissions')
         const { data: moduleData, error: moduleError } = await supabase
           .from('user_module_permissions')
           .select('module_name, can_read, can_write, can_delete')
           .eq('user_id', user.id)
 
         if (moduleError || !moduleData || moduleData.length === 0) {
-          if (moduleError) console.error('[v0] Error fetching module permissions:', moduleError)
           // Fallback to role-based permissions
           setPermissions(getDefaultPermissions(user.id))
         } else {
@@ -54,7 +51,6 @@ export function useUserPermissions() {
         }
 
         // Fetch fundo permissions
-        console.log('[v0] Fetching user fundo permissions')
         const { data: fundoData, error: fundoError } = await supabase
           .from('user_fundo_permissions')
           .select(`
@@ -66,7 +62,6 @@ export function useUserPermissions() {
           .eq('user_id', user.id)
 
         if (fundoError) {
-          console.error('[v0] Error fetching fundo permissions:', fundoError)
           setFundoPermissions([])
         } else {
           const formattedFundoPermissions = (fundoData || []).map(item => ({
@@ -78,7 +73,6 @@ export function useUserPermissions() {
 
         clearTimeout(timeoutId)
       } catch (error) {
-        console.error('[v0] Error in fetchPermissions:', error)
         setPermissions(getDefaultPermissions(user.id))
         setFundoPermissions([])
         clearTimeout(timeoutId)

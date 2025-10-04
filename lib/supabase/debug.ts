@@ -19,7 +19,6 @@ export class SupabaseDebugger {
     }
 
     this.logs.push(logEntry)
-    console.log(`[v0-supabase-${level}] ${message}`, data || "")
 
     // Mantener solo los últimos 100 logs
     if (this.logs.length > 100) {
