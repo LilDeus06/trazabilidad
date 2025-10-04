@@ -10,6 +10,8 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
+export const dynamic = 'force-dynamic'
+
 export default async function RecepcionPage() {
   const supabase = await createClient()
 
@@ -59,10 +61,6 @@ export default async function RecepcionPage() {
       )
     `)
     .order("fecha_recepcion", { ascending: false })
-
-  if (recepcionesError) {
-    console.error("Error fetching recepciones:", recepcionesError)
-  }
 
   const getCalidadBadge = (calidad: string | null) => {
     if (!calidad) return <Badge variant="secondary">Sin evaluar</Badge>
