@@ -92,14 +92,11 @@ export function useUserPermissions() {
 
   const getDefaultPermissions = (userId: string): ModulePermission[] => {
     const role = profile?.rol || 'usuario'
-    const basePermissions: ModulePermission[] = [
-      { module_name: 'dashboard', can_read: true, can_write: false, can_delete: false },
-    ]
 
     switch (role) {
       case 'admin':
         return [
-          ...basePermissions,
+          { module_name: 'dashboard', can_read: true, can_write: false, can_delete: false },
           { module_name: 'admin', can_read: true, can_write: true, can_delete: true },
           { module_name: 'usuarios', can_read: true, can_write: true, can_delete: true },
           { module_name: 'fundos', can_read: true, can_write: true, can_delete: true },
@@ -112,7 +109,7 @@ export function useUserPermissions() {
         ]
       case 'operador':
         return [
-          ...basePermissions,
+          { module_name: 'dashboard', can_read: true, can_write: false, can_delete: false },
           { module_name: 'fundos', can_read: true, can_write: true, can_delete: false },
           { module_name: 'lotes', can_read: true, can_write: true, can_delete: false },
           { module_name: 'camiones', can_read: true, can_write: true, can_delete: false },
@@ -123,7 +120,7 @@ export function useUserPermissions() {
         ]
       default: // usuario
         return [
-          ...basePermissions,
+          { module_name: 'dashboard', can_read: true, can_write: false, can_delete: false },
           { module_name: 'guias', can_read: true, can_write: false, can_delete: false },
         ]
     }

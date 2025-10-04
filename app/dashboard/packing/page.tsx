@@ -15,10 +15,20 @@ export default async function PackingPage() {
     redirect("/auth/login")
   }
 
-  // Verificar rol del usuario
+  // Verificar permisos del usuario para el módulo packing
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_read, can_write, can_delete")
+    .eq("user_id", user.id)
+    .eq("module_name", "packing")
+    .single()
+
+  // Si no tiene permisos específicos, verificar rol por defecto
   const { data: profile } = await supabase.from("profiles").select("rol").eq("id", user.id).single()
 
-  if (!profile || !["admin", "operador"].includes(profile.rol)) {
+  const hasReadPermission = permissions?.can_read || (profile?.rol && ["admin", "operador"].includes(profile.rol))
+
+  if (!hasReadPermission) {
     redirect("/dashboard")
   }
 
@@ -34,7 +44,7 @@ export default async function PackingPage() {
           <h1 className="text-3xl font-bold text-foreground">Gestión de Packing</h1>
           <p className="text-muted-foreground">Control de empaque y procesamiento final</p>
         </div>
-        {profile.rol === "admin" && (
+        {profile?.rol === "admin" && (
           <div className="flex gap-2">
             <Button asChild variant="outline">
               <Link href="/dashboard/packing/reportes">

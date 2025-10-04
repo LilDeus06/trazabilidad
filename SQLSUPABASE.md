@@ -84,6 +84,16 @@ CREATE TABLE public.fundos (
   CONSTRAINT fundos_pkey PRIMARY KEY (id),
   CONSTRAINT fundos_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
 );
+CREATE TABLE public.guia_lotes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  guia_id uuid NOT NULL,
+  lote_id uuid NOT NULL,
+  cantidad integer NOT NULL CHECK (cantidad > 0),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT guia_lotes_pkey PRIMARY KEY (id),
+  CONSTRAINT guia_lotes_guia_id_fkey FOREIGN KEY (guia_id) REFERENCES public.guias(id),
+  CONSTRAINT guia_lotes_lote_id_fkey FOREIGN KEY (lote_id) REFERENCES public.lotes(id)
+);
 CREATE TABLE public.guias (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   fecha_hora timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -93,12 +103,25 @@ CREATE TABLE public.guias (
   usuario_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   id_fundo uuid NOT NULL,
-  id_lote uuid,
+  id_lotes ARRAY,
   CONSTRAINT guias_pkey PRIMARY KEY (id),
   CONSTRAINT guias_id_camion_fkey FOREIGN KEY (id_camion) REFERENCES public.camiones(id),
   CONSTRAINT guias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id),
-  CONSTRAINT guias_id_fundo_fkey FOREIGN KEY (id_fundo) REFERENCES public.fundos(id),
-  CONSTRAINT guias_id_lote_fkey FOREIGN KEY (id_lote) REFERENCES public.lotes(id)
+  CONSTRAINT guias_id_fundo_fkey FOREIGN KEY (id_fundo) REFERENCES public.fundos(id)
+);
+CREATE TABLE public.jabas (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  qr_code text NOT NULL UNIQUE,
+  cantidad integer NOT NULL CHECK (cantidad > 0),
+  lote_id uuid,
+  carreta_id uuid,
+  responsable_id uuid NOT NULL,
+  fecha date NOT NULL DEFAULT CURRENT_DATE,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT jabas_pkey PRIMARY KEY (id),
+  CONSTRAINT jabas_lote_id_fkey FOREIGN KEY (lote_id) REFERENCES public.lotes(id),
+  CONSTRAINT jabas_carreta_id_fkey FOREIGN KEY (carreta_id) REFERENCES public.campo_carreta(id),
+  CONSTRAINT jabas_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.lotes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

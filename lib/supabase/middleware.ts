@@ -34,11 +34,41 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: If you remove getUser() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
   let user = null
+  let userProfile = null
   try {
     const {
       data: { user: authUser },
     } = await supabase.auth.getUser()
     user = authUser
+
+    // If user exists, check if they are active
+    if (user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('activo')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        console.error('[Middleware] Error getting user profile:', profileError)
+        // On profile error, redirect to login
+        if (
+          request.nextUrl.pathname !== "/" &&
+          !request.nextUrl.pathname.startsWith("/login") &&
+          !request.nextUrl.pathname.startsWith("/auth")
+        ) {
+          const url = request.nextUrl.clone()
+          url.pathname = "/auth/login"
+          return NextResponse.redirect(url)
+        }
+      } else {
+        userProfile = profile
+        // If user is not active, treat as if user doesn't exist
+        if (!profile.activo) {
+          user = null
+        }
+      }
+    }
   } catch (error) {
     console.error('[Middleware] Error getting user:', error)
     // On error, redirect to login

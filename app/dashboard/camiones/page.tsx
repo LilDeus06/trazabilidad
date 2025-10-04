@@ -32,7 +32,7 @@ export default async function CamionesPage() {
     redirect("/dashboard")
   }
 
-  // Obtener camiones con información de fundo y lote
+  // Obtener camiones con información de fundo y lote (sin límite para paginación del lado cliente)
   const { data: camiones, error } = await supabase
     .from("camiones")
     .select(`

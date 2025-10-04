@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import * as XLSX from 'xlsx'
+import { formatDateTimePeru, formatDatePeru } from '@/lib/utils/date'
 
 export async function GET(request: NextRequest) {
   try {
@@ -109,13 +110,7 @@ export async function GET(request: NextRequest) {
       if (guia.lotes && guia.lotes.length > 0) {
         guia.lotes.forEach((lote: { nombre: string; cantidad: number; variedad: string }) => {
           excelData.push({
-            'Fecha y Hora': new Date(guia.fecha_hora).toLocaleString('es-PE', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit'
-            }),
+            'Fecha y Hora': formatDateTimePeru(guia.fecha_hora),
             'Camión': guia.camiones.placa,
             'Chofer': guia.camiones.chofer,
             'Fundo': guia.camiones.fundos?.nombre || guia.fundos?.nombre || 'N/A',
@@ -132,13 +127,7 @@ export async function GET(request: NextRequest) {
       } else {
         // If no lotes, still add a row with empty lote info
         excelData.push({
-          'Fecha y Hora': new Date(guia.fecha_hora).toLocaleString('es-PE', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
+          'Fecha y Hora': formatDateTimePeru(guia.fecha_hora),
           'Camión': guia.camiones.placa,
           'Chofer': guia.camiones.chofer,
           'Fundo': guia.camiones.fundos?.nombre || guia.fundos?.nombre || 'N/A',

@@ -12,10 +12,20 @@ export default async function NuevoCamionPage() {
     redirect("/auth/login")
   }
 
-  // Verificar que sea admin
+  // Verificar permisos del usuario para el módulo camiones
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_read, can_write, can_delete")
+    .eq("user_id", user.id)
+    .eq("module_name", "camiones")
+    .single()
+
+  // Si no tiene permisos específicos, verificar rol por defecto
   const { data: profile } = await supabase.from("profiles").select("rol").eq("id", user.id).single()
 
-  if (!profile || profile.rol !== "admin") {
+  const hasWritePermission = permissions?.can_write || (profile?.rol && ["admin", "operador"].includes(profile.rol))
+
+  if (!hasWritePermission) {
     redirect("/dashboard/camiones")
   }
 

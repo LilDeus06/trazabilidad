@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,17 +17,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
-import { MoreHorizontal, Edit, Trash2, Search, MapPin } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, MapPin, Download, Calendar } from "lucide-react"
 import Link from "next/link"
+import { SmartTable } from "@/components/ui/smart-table"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { format } from "date-fns"
 
 interface Fundo {
   id: string
   nombre: string
   ubicacion: string | null
   area_hectareas: number | null
-  responsable_id: string | null
-  activo: boolean
+  tipo_cultivo: string | null
   created_at: string
   updated_at: string
 }
@@ -39,16 +40,10 @@ interface FundosTableProps {
 }
 
 export function FundosTable({ fundos, canWrite }: FundosTableProps) {
-  const [searchTerm, setSearchTerm] = useState("")
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const router = useRouter()
-
-  const filteredFundos = fundos.filter(
-    (fundo) =>
-      fundo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (fundo.ubicacion && fundo.ubicacion.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
 
   const handleDelete = async () => {
     if (!deleteId) return
@@ -70,114 +65,196 @@ export function FundosTable({ fundos, canWrite }: FundosTableProps) {
     }
   }
 
-  const toggleStatus = async (id: string, currentStatus: boolean) => {
-    const supabase = createClient()
-
-    try {
-      const { error } = await supabase.from("fundos").update({ activo: !currentStatus }).eq("id", id)
-
-      if (error) throw error
-
-      router.refresh()
-    } catch (error) {
-      console.error("Error updating fundo status:", error)
+  const handleExport = () => {
+    let url = '/api/fundos/export'
+    if (dateRange?.from && dateRange?.to) {
+      const fromDate = format(dateRange.from, 'yyyy-MM-dd')
+      const toDate = format(dateRange.to, 'yyyy-MM-dd')
+      url += `?start_date=${fromDate}&end_date=${toDate}`
     }
+    window.open(url, '_blank')
   }
+
+  const handleExportAll = () => {
+    window.open('/api/fundos/export?full=true', '_blank')
+  }
+
+  const columns = [
+    {
+      key: 'nombre',
+      label: 'Nombre',
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-medium">{value}</span>
+      )
+    },
+    {
+      key: 'ubicacion',
+      label: 'Ubicación',
+      sortable: true,
+      render: (value: string | null) => (
+        value ? (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span>{value}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">Sin especificar</span>
+        )
+      )
+    },
+    {
+      key: 'area_hectareas',
+      label: 'Área Total',
+      sortable: true,
+      render: (value: number | null) => (
+        value ? (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{value}</span>
+            <span className="text-sm text-muted-foreground">ha</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">N/A</span>
+        )
+      )
+    },
+    {
+      key: 'tipo_cultivo',
+      label: 'Cultivo Principal',
+      sortable: true,
+      render: (value: string | null) => (
+        value ? (
+          <Badge variant="outline">{value}</Badge>
+        ) : (
+          <span className="text-muted-foreground">Sin especificar</span>
+        )
+      )
+    },
+    {
+      key: 'created_at',
+      label: 'Fecha Registro',
+      sortable: true,
+      render: (value: string) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(value).toLocaleDateString("es-ES")}
+        </span>
+      )
+    }
+  ]
+
+  // Add actions column if user has write permissions
+  if (canWrite) {
+    columns.push({
+      key: 'actions',
+      label: 'Acciones',
+      sortable: false,
+      className: 'w-[70px]',
+      render: (_: any, item: Fundo) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/fundos/${item.id}/editar`}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(item.id)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    } as any)
+  }
+
+  const totalArea = fundos.reduce((sum, f) => {
+    const area = f.area_hectareas
+    return sum + (typeof area === 'number' && area > 0 ? area : 0)
+  }, 0)
 
   return (
     <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <DateRangePicker
+            date={dateRange}
+            onDateChange={setDateRange}
+            placeholder="Filtrar por rango de fechas"
+          />
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {dateRange?.from ? 'Exportar Rango' : 'Exportar Hoy'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportAll}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Exportar Todo
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Fundos</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{fundos.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Área Total</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalArea.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground">hectáreas</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Área Promedio</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {fundos.length > 0 ? (totalArea / fundos.length).toFixed(1) : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">hectáreas por fundo</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="border-border/50">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Fundos Registrados
-              </CardTitle>
-              <CardDescription>{fundos.length} fundos en total</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nombre o ubicación..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-64"
-                />
-              </div>
-            </div>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Fundos Registrados
+          </CardTitle>
+          <CardDescription>Gestión de fundos con ordenamiento y paginación</CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredFundos.length === 0 ? (
-            <div className="text-center py-8">
-              <MapPin className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">No hay fundos</h3>
-              <p className="text-muted-foreground">
-                {searchTerm ? "No se encontraron fundos con ese criterio" : "Comienza agregando un nuevo fundo"}
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Ubicación</TableHead>
-                    <TableHead>Área (ha)</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha Registro</TableHead>
-                    {canWrite && <TableHead className="w-[70px]">Acciones</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFundos.map((fundo) => (
-                    <TableRow key={fundo.id}>
-                      <TableCell className="font-medium">{fundo.nombre}</TableCell>
-                      <TableCell>{fundo.ubicacion || "Sin especificar"}</TableCell>
-                      <TableCell>{fundo.area_hectareas ? `${fundo.area_hectareas} ha` : "N/A"}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={fundo.activo ? "default" : "secondary"}
-                          className={fundo.activo ? "bg-green-500/10 text-green-500 border-green-500/20" : ""}
-                        >
-                          {fundo.activo ? "Activo" : "Inactivo"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(fundo.created_at).toLocaleDateString("es-ES")}</TableCell>
-                      {canWrite && (
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/fundos/${fundo.id}/editar`}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => toggleStatus(fundo.id, fundo.activo)}>
-                                {fundo.activo ? "Desactivar" : "Activar"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(fundo.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <SmartTable
+            data={fundos}
+            columns={columns}
+            emptyMessage="No hay fundos disponibles"
+            itemsPerPage={10}
+          />
         </CardContent>
       </Card>
 
