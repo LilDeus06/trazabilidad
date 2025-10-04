@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const dateFilter = searchParams.get('date')
+    const startDateParam = searchParams.get('start_date')
+    const endDateParam = searchParams.get('end_date')
 
     // Build query
     let query = supabase
@@ -35,11 +36,10 @@ export async function GET(request: NextRequest) {
       .order('fecha_hora', { ascending: false })
 
     // Apply date filter if provided
-    if (dateFilter) {
-      // Filter by date (YYYY-MM-DD)
-      const startDate = new Date(dateFilter)
-      const endDate = new Date(dateFilter)
-      endDate.setDate(endDate.getDate() + 1)
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam)
+      const endDate = new Date(endDateParam)
+      endDate.setDate(endDate.getDate() + 1) // Include the end date fully
 
       query = query
         .gte('fecha_hora', startDate.toISOString())
@@ -168,8 +168,8 @@ export async function GET(request: NextRequest) {
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
 
     // Return Excel file
-    const filename = dateFilter ?
-      `guias_${dateFilter}.xlsx` :
+    const filename = startDateParam && endDateParam ?
+      `guias_${startDateParam}_a_${endDateParam}.xlsx` :
       `guias_${new Date().toISOString().split('T')[0]}.xlsx`
 
     return new NextResponse(buf, {

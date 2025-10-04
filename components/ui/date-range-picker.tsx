@@ -88,6 +88,8 @@ export function DateRangePicker({
             pagedNavigation={true}
             className={cn(bgColor, textColor)}
             classNames={{
+              today: cn(textColor, hoverBgColor, "hover:text-white"),
+              day_button: cn(textColor, hoverBgColor, "hover:text-white"),
               months: cn(bgColor, textColor),
               month: cn(bgColor, textColor),
               caption: cn(bgColor, textColor),
@@ -109,7 +111,8 @@ export function DateRangePicker({
               day_range_start: cn(selectedBgColor, selectedTextColor, "hover:bg-gray-200"),
               day_range_end: cn(selectedBgColor, selectedTextColor, "hover:bg-gray-200"),
               day_range_middle: cn(rangeMiddleBgColor, textColor, "hover:bg-slate-600"),
-              day_hidden: "invisible",
+              day_hidden: "visible",
+              selected: cn(selectedBgColor,bgColor,hoverBgColor, selectedTextColor),
             }}
           />
         </PopoverContent>

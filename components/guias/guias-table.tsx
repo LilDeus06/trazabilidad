@@ -99,11 +99,19 @@ export function GuiasTable({ guias, userRole, userMap, permissions }: GuiasTable
 
   const handleExport = () => {
     let url = '/api/guias/export'
+    let fromDate, toDate
+
     if (dateRange?.from && dateRange?.to) {
-      const fromDate = format(dateRange.from, 'yyyy-MM-dd')
-      const toDate = format(dateRange.to, 'yyyy-MM-dd')
-      url += `?start_date=${fromDate}&end_date=${toDate}`
+      fromDate = format(dateRange.from, 'yyyy-MM-dd')
+      toDate = format(dateRange.to, 'yyyy-MM-dd')
+    } else {
+      // For "Exportar Hoy", use today's date
+      const today = new Date()
+      fromDate = format(today, 'yyyy-MM-dd')
+      toDate = format(today, 'yyyy-MM-dd')
     }
+
+    url += `?start_date=${fromDate}&end_date=${toDate}`
     window.open(url, '_blank')
   }
 
