@@ -104,7 +104,7 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
       if (!user) throw new Error("Usuario no autenticado")
 
       const guiaData = {
-        fecha_hora: new Date(formData.fecha_hora).toISOString(),
+        fecha_hora: new Date(formData.fecha_hora + 'Z').toISOString(),
         id_camion: formData.id_camion,
         id_fundo: selectedCamion?.id_fundo,
         id_lotes: formData.id_lotes.length > 0 ? formData.id_lotes : null,

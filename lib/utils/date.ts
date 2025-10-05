@@ -11,7 +11,7 @@ export function formatDateTimePeru(date: Date | string, options?: Intl.DateTimeF
   const dateObj = typeof date === 'string' ? new Date(date) : date
 
   const defaultOptions: Intl.DateTimeFormatOptions = {
-    timeZone: PERU_TIMEZONE,
+    timeZone: 'UTC',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

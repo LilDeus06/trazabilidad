@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import { ConnectionStatus } from "@/components/connection-status"
 import { GlobalGsap } from "@/components/animations/global-gsap"
 import "./globals.css"
+import "@/styles/scrollbar.css"
 
 
 export const metadata: Metadata = {
@@ -21,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${GeistSans.variable} ${GeistMono.variable} dark`}>
-      <body className="font-sans">
+      <body className="font-sans min-h-screen overflow-y-auto">
         <GlobalGsap />
         <ConnectionStatus />
         <Suspense fallback={<div>Loading...</div>}>

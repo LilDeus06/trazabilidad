@@ -39,8 +39,8 @@ export async function GET(request: NextRequest) {
 
     // Apply date filter if provided
     if (startDateParam && endDateParam) {
-      const startDate = new Date(startDateParam)
-      const endDate = new Date(endDateParam)
+      const startDate = new Date(`${startDateParam}T00:00:00.000Z`)
+      const endDate = new Date(startDate)
       endDate.setDate(endDate.getDate() + 1) // Include the end date fully
 
       query = query

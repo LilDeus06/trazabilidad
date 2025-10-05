@@ -1,11 +1,9 @@
-# TODO - Clean Console Logs and Fix Build Error
+# TODO: Fix GUIAS Export and Date Handling
 
-## Tasks to Complete
-- [x] Remove all console.log and console.error statements from lib/supabase/server.ts
-- [x] Remove console.error from app/dashboard/acopio/recepcion/page.tsx
-- [x] Add 'export const dynamic = 'force-dynamic'' to app/dashboard/acopio/recepcion/page.tsx to fix static rendering error
-
-## Notes
-- Console logs are causing clutter in the project output
-- Build error occurs because the page uses cookies, preventing static rendering
-- Dynamic rendering will allow the page to use cookies properly
+## Tasks
+- [x] Update guia-form.tsx to save fecha_hora treating input as UTC (stores as Peru time)
+- [x] Update date formatting functions in lib/utils/date.ts to display stored UTC as local time
+- [x] Fix date filtering in app/api/guias/export/route.ts for new date storage
+- [x] Make date filter in guias table affect the displayed data
+- [x] Test export functionality for today's data
+- [x] Verify date display shows correctly without conversions
