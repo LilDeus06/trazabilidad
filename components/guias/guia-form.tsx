@@ -38,6 +38,7 @@ interface Guia {
   enviadas: number
   guias: string
   turno: string
+  packing: string
 }
 
 interface GuiaFormProps {
@@ -65,6 +66,7 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
     enviadas: guia?.enviadas || 0,
     guias: guia?.guias || "",
     turno: guia?.turno || "Diurno",
+    packing: guia?.packing || "",
   })
   const [selectedCamion, setSelectedCamion] = useState<Camion | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -113,6 +115,7 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
         enviadas: formData.enviadas,
         guias: formData.guias,
         turno: formData.turno,
+        packing: formData.packing,
         usuario_id: user.id,
       }
 
@@ -234,6 +237,22 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
                       <SelectContent>
                         <SelectItem value="Diurno">Diurno</SelectItem>
                         <SelectItem value="Nocturno">Nocturno</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="packing">Packing</Label>
+                    <Select
+                      value={formData.packing}
+                      onValueChange={(value) => setFormData({ ...formData, packing: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un packing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PKG LA GRANJA">PKG LA GRANJA</SelectItem>
+                        <SelectItem value="PKG SAFCO">PKG SAFCO</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -22,3 +22,18 @@
 - [x] Update app/dashboard/guias/[id]/editar/page.tsx to fetch turno
 - [x] Update app/api/guias/export/route.ts to include turno in export
 - [ ] Test creation and editing of guias with turno
+
+# TODO: Add Packing Column to Guias
+
+## Tasks
+- [x] Create SQL script to add packing column to guias table
+- [x] Update Guia interface in guia-form.tsx to include packing
+- [x] Update formData in guia-form.tsx to include packing
+- [x] Add packing select field to guia-form.tsx (required)
+- [x] Update guiaData in guia-form.tsx to include packing
+- [x] Update Guia interface in guias-table.tsx to include packing
+- [x] Add packing column to guias-table.tsx
+- [x] Update app/dashboard/guias/page.tsx to fetch packing
+- [x] Update app/dashboard/guias/[id]/editar/page.tsx to fetch packing
+- [x] Update app/api/guias/export/route.ts to include packing in export
+- [ ] Test creation and editing of guias with packing

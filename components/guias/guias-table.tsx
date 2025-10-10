@@ -34,6 +34,7 @@ interface Guia {
   enviadas: number
   guias: string
   turno: string
+  packing: string
   usuario_id: string
   created_at: string
   camiones: {
@@ -213,6 +214,16 @@ export function GuiasTable({ guias, userRole, userMap, permissions }: GuiasTable
       sortable: true,
       render: (value: string) => (
         <Badge variant={value === 'Diurno' ? 'default' : 'secondary'}>
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'packing',
+      label: 'Packing',
+      sortable: true,
+      render: (value: string) => (
+        <Badge variant="outline">
           {value}
         </Badge>
       )
