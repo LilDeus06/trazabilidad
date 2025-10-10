@@ -52,10 +52,10 @@ CREATE TABLE public.camiones (
 CREATE TABLE public.campo_carreta (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   id_recoleccion uuid,
-  numero_carreta text NOT NULL,
-  capacidad integer NOT NULL,
-  estado text DEFAULT 'disponible'::text CHECK (estado = ANY (ARRAY['disponible'::text, 'en_uso'::text, 'mantenimiento'::text])),
+  nombre_carreta text NOT NULL,
+  total integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  estado integer,
   CONSTRAINT campo_carreta_pkey PRIMARY KEY (id),
   CONSTRAINT campo_carreta_id_recoleccion_fkey FOREIGN KEY (id_recoleccion) REFERENCES public.campo_recoleccion(id)
 );
@@ -63,8 +63,8 @@ CREATE TABLE public.campo_recoleccion (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   fecha date NOT NULL,
   lote text NOT NULL,
-  cantidad_recolectada integer NOT NULL,
-  calidad text,
+  total_jabas integer NOT NULL,
+  cantidad_jabas text,
   responsable_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   id_lote uuid,

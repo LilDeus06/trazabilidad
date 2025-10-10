@@ -37,6 +37,7 @@ interface Guia {
   loteQuantities?: Record<string, number>
   enviadas: number
   guias: string
+  turno: string
 }
 
 interface GuiaFormProps {
@@ -63,6 +64,7 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
     loteQuantities: guia?.loteQuantities || {} as Record<string, number>,
     enviadas: guia?.enviadas || 0,
     guias: guia?.guias || "",
+    turno: guia?.turno || "Diurno",
   })
   const [selectedCamion, setSelectedCamion] = useState<Camion | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -110,6 +112,7 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
         id_lotes: formData.id_lotes.length > 0 ? formData.id_lotes : null,
         enviadas: formData.enviadas,
         guias: formData.guias,
+        turno: formData.turno,
         usuario_id: user.id,
       }
 
@@ -216,6 +219,21 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
                             {camion.placa} - {camion.chofer}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="turno">Turno</Label>
+                    <Select
+                      value={formData.turno}
+                      onValueChange={(value) => setFormData({ ...formData, turno: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un turno" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Diurno">Diurno</SelectItem>
+                        <SelectItem value="Nocturno">Nocturno</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

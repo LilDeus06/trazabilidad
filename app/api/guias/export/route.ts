@@ -119,6 +119,7 @@ export async function GET(request: NextRequest) {
             'Variedad': lote.variedad || 'N/A',
             'Cantidad (Jabas)': lote.cantidad,
             'Guía': guia.guias,
+            'Turno': guia.turno || 'Diurno',
             'Jabas Enviadas Total': guia.enviadas,
             'Usuario': userMap.get(guia.usuario_id) ?
               `${userMap.get(guia.usuario_id)?.nombre} ${userMap.get(guia.usuario_id)?.apellido}` :
@@ -136,6 +137,7 @@ export async function GET(request: NextRequest) {
           'Variedad': 'N/A',
           'Cantidad (Jabas)': 0,
           'Guía': guia.guias,
+          'Turno': guia.turno || 'Diurno',
           'Jabas Enviadas Total': guia.enviadas,
           'Usuario': userMap.get(guia.usuario_id) ?
             `${userMap.get(guia.usuario_id)?.nombre} ${userMap.get(guia.usuario_id)?.apellido}` :
@@ -158,6 +160,7 @@ export async function GET(request: NextRequest) {
       { wch: 20 }, // Variedad
       { wch: 18 }, // Cantidad (Jabas)
       { wch: 15 }, // Guía
+      { wch: 12 }, // Turno
       { wch: 20 }, // Jabas Enviadas Total
       { wch: 25 }  // Usuario
     ]

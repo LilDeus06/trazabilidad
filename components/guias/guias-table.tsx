@@ -33,6 +33,7 @@ interface Guia {
   id_lotes: string[] | null
   enviadas: number
   guias: string
+  turno: string
   usuario_id: string
   created_at: string
   camiones: {
@@ -202,6 +203,16 @@ export function GuiasTable({ guias, userRole, userMap, permissions }: GuiasTable
       sortable: true,
       render: (value: string) => (
         <Badge variant="outline" className="font-mono">
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'turno',
+      label: 'Turno',
+      sortable: true,
+      render: (value: string) => (
+        <Badge variant={value === 'Diurno' ? 'default' : 'secondary'}>
           {value}
         </Badge>
       )
