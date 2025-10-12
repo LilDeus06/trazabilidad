@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
             'Guía': guia.guias,
             'Turno': guia.turno || 'Diurno',
             'Packing': guia.packing || 'PKG LA GRANJA',
+            'Viaje': guia.viaje || 1,
             'Jabas Enviadas Total': guia.enviadas,
             'Usuario': userMap.get(guia.usuario_id) ?
               `${userMap.get(guia.usuario_id)?.nombre} ${userMap.get(guia.usuario_id)?.apellido}` :
@@ -164,6 +165,7 @@ export async function GET(request: NextRequest) {
       { wch: 15 }, // Guía
       { wch: 12 }, // Turno
       { wch: 18 }, // Packing
+      { wch: 10 }, // Viaje
       { wch: 20 }, // Jabas Enviadas Total
       { wch: 25 }  // Usuario
     ]

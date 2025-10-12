@@ -107,8 +107,30 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
       } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuario no autenticado")
 
+      // Calcular el número de viaje automáticamente
+      const fechaViaje = new Date(formData.fecha_hora + 'Z')
+      const fechaDate = fechaViaje.toISOString().split('T')[0] // YYYY-MM-DD format
+
+      // Get chofer name from selected camion
+      const { data: camionData } = await supabase
+        .from('camiones')
+        .select('chofer')
+        .eq('id', formData.id_camion)
+        .single()
+
+      if (!camionData) throw new Error("Camión no encontrado")
+
+      // Call the database function to get next viaje number
+      const { data: viajeData, error: viajeError } = await supabase
+        .rpc('get_next_viaje_number', {
+          p_chofer: camionData.chofer,
+          p_fecha: fechaDate
+        })
+
+      if (viajeError) throw viajeError
+
       const guiaData = {
-        fecha_hora: new Date(formData.fecha_hora + 'Z').toISOString(),
+        fecha_hora: fechaViaje.toISOString(),
         id_camion: formData.id_camion,
         id_fundo: selectedCamion?.id_fundo,
         id_lotes: formData.id_lotes.length > 0 ? formData.id_lotes : null,
@@ -116,6 +138,7 @@ export function GuiaForm({ camiones, lotes, guia }: GuiaFormProps) {
         guias: formData.guias,
         turno: formData.turno,
         packing: formData.packing,
+        viaje: viajeData,
         usuario_id: user.id,
       }
 

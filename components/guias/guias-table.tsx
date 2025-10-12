@@ -35,6 +35,7 @@ interface Guia {
   guias: string
   turno: string
   packing: string
+  viaje: number
   usuario_id: string
   created_at: string
   camiones: {
@@ -86,6 +87,32 @@ export function GuiasTable({ guias, userRole, userMap, permissions }: GuiasTable
     const supabase = createClient()
 
     try {
+      // Get the guia data before deletion to recalculate viajes
+      const { data: guiaToDelete } = await supabase
+        .from("guias")
+        .select("id, viaje, fecha_hora, id_camion")
+        .eq("id", deleteId)
+        .single()
+
+      if (guiaToDelete) {
+        // Get chofer name
+        const { data: camionData } = await supabase
+          .from('camiones')
+          .select('chofer')
+          .eq('id', guiaToDelete.id_camion)
+          .single()
+
+        if (camionData) {
+          // Recalculate viajes after deletion
+          const fechaDate = new Date(guiaToDelete.fecha_hora).toISOString().split('T')[0]
+          await supabase.rpc('recalculate_viajes_after_deletion', {
+            p_chofer: camionData.chofer,
+            p_fecha: fechaDate,
+            p_deleted_viaje: guiaToDelete.viaje
+          })
+        }
+      }
+
       const { error } = await supabase.from("guias").delete().eq("id", deleteId)
 
       if (error) throw error
@@ -225,6 +252,16 @@ export function GuiasTable({ guias, userRole, userMap, permissions }: GuiasTable
       render: (value: string) => (
         <Badge variant="outline">
           {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'viaje',
+      label: 'Viaje',
+      sortable: true,
+      render: (value: number) => (
+        <Badge variant="outline" className="font-mono">
+          #{value}
         </Badge>
       )
     },

@@ -17,10 +17,13 @@ CREATE TABLE public.acopio_pallets (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   codigo_pallet text NOT NULL UNIQUE,
   capacidad integer NOT NULL,
-  estado text DEFAULT 'vacio'::text CHECK (estado = ANY (ARRAY['vacio'::text, 'parcial'::text, 'lleno'::text, 'despachado'::text])),
-  ubicacion text,
+  estado text DEFAULT '''acopio''::text'::text CHECK (estado = ANY (ARRAY['vacio'::text, 'parcial'::text, 'lleno'::text, 'despachado'::text, 'acopio'::text, 'packing'::text])),
+  id_lote uuid,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT acopio_pallets_pkey PRIMARY KEY (id)
+  fundo uuid,
+  CONSTRAINT acopio_pallets_pkey PRIMARY KEY (id),
+  CONSTRAINT acopio_pallets_id_lote_fkey FOREIGN KEY (id_lote) REFERENCES public.lotes(id),
+  CONSTRAINT acopio_pallets_fundo_fkey FOREIGN KEY (fundo) REFERENCES public.fundos(id)
 );
 CREATE TABLE public.acopio_recepcion (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -104,6 +107,10 @@ CREATE TABLE public.guias (
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   id_fundo uuid NOT NULL,
   id_lotes ARRAY,
+  turno text DEFAULT 'Diurno'::text CHECK (turno = ANY (ARRAY['Diurno'::text, 'Nocturno'::text])),
+  despachado boolean DEFAULT false,
+  packing text CHECK (packing = ANY (ARRAY['PKG LA GRANJA'::text, 'PKG SAFCO'::text])),
+  viaje integer DEFAULT 1,
   CONSTRAINT guias_pkey PRIMARY KEY (id),
   CONSTRAINT guias_id_camion_fkey FOREIGN KEY (id_camion) REFERENCES public.camiones(id),
   CONSTRAINT guias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id),
@@ -144,13 +151,20 @@ CREATE TABLE public.packing (
   fecha_packing timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   id_pallet uuid,
   cantidad_procesada integer NOT NULL,
-  tipo_empaque text NOT NULL,
   destino text,
   responsable_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  id_lotes ARRAY,
+  guia_id uuid,
+  codigo_pallet text,
+  lote text,
+  horas timestamp with time zone,
+  fundo text,
+  viaje integer,
   CONSTRAINT packing_pkey PRIMARY KEY (id),
   CONSTRAINT packing_id_pallet_fkey FOREIGN KEY (id_pallet) REFERENCES public.acopio_pallets(id),
-  CONSTRAINT packing_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id)
+  CONSTRAINT packing_responsable_id_fkey FOREIGN KEY (responsable_id) REFERENCES auth.users(id),
+  CONSTRAINT packing_guia_id_fkey FOREIGN KEY (guia_id) REFERENCES public.guias(id)
 );
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
