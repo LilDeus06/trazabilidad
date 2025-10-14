@@ -110,7 +110,7 @@ CREATE TABLE public.guias (
   turno text DEFAULT 'Diurno'::text CHECK (turno = ANY (ARRAY['Diurno'::text, 'Nocturno'::text])),
   despachado boolean DEFAULT false,
   packing text CHECK (packing = ANY (ARRAY['PKG LA GRANJA'::text, 'PKG SAFCO'::text])),
-  viaje integer DEFAULT 1,
+  viaje smallint,
   CONSTRAINT guias_pkey PRIMARY KEY (id),
   CONSTRAINT guias_id_camion_fkey FOREIGN KEY (id_camion) REFERENCES public.camiones(id),
   CONSTRAINT guias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id),

@@ -93,6 +93,7 @@ export function PackingDataTable() {
             nombre,
             apellido
           )
+            
         `)
 
       // Filtros de fecha
@@ -108,11 +109,9 @@ export function PackingDataTable() {
       }
 
       // Filtro por tipo
-      // Filtro por tipo
       if (data.selectedTipo !== "all") {
         query = query.eq('guias.packing', data.selectedTipo)
       }
-
 
       // Ordenamiento
       const sortField = data.sortBy === 'fecha' ? 'fecha_packing' :
@@ -123,6 +122,7 @@ export function PackingDataTable() {
 
       const { data: result, error } = await query
 
+      
       if (error) throw error
 
       // Filtrar por término de búsqueda

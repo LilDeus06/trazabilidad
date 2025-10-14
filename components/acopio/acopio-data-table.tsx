@@ -8,15 +8,78 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Download, Search, Filter, Eye, Calendar, MapPin, Package, TrendingUp } from "lucide-react"
+import { Download, Search, Filter, Calendar, MapPin, Package, TrendingUp } from "lucide-react"
 import { formatDateTimePeru, formatDatePeru } from "@/lib/utils/date"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 
+interface Recepcion {
+  id: string
+  created_at: string
+  procedencia: string
+  cantidad_recibida: number
+  calidad?: string
+  responsable_id?: string
+  lotes?: {
+    id: string
+    nombre: string
+    fundos?: {
+      id: string
+      nombre: string
+    }
+  }
+  profiles?: {
+    nombre: string
+    apellido: string
+  }
+}
+
+interface Pallet {
+  id: string
+  codigo_pallet: string
+  capacidad: number
+  estado: string
+  created_at: string
+  lotes?: {
+    id: string
+    nombre: string
+    fundos?: {
+      id: string
+      nombre: string
+    }
+  }
+  
+}
+
+interface Carga {
+  id: string
+  fecha_carga: string
+  cantidad: number
+  responsable_id?: string
+  acopio_pallets?: {
+    codigo_pallet: string
+    estado: string
+  }
+  acopio_recepcion?: {
+    fecha_recepcion: string
+    lotes?: {
+      nombre: string
+      fundos?: {
+        id: string
+        nombre: string
+      }
+    }
+  }
+  profiles?: {
+    nombre: string
+    apellido: string
+  }
+}
+
 interface AcopioData {
-  recepciones: any[]
-  pallets: any[]
-  cargas: any[]
+  recepciones: Recepcion[]
+  pallets: Pallet[]
+  cargas: Carga[]
   loading: boolean
   searchTerm: string
   selectedFundo: string
@@ -37,7 +100,7 @@ export function AcopioDataTable() {
     selectedFundo: "all",
     selectedEstado: "all",
     dateRange: undefined,
-    currentView: 'recepciones',
+  currentView: 'pallets',
     sortBy: 'fecha_recepcion',
     sortOrder: 'desc'
   })
@@ -46,6 +109,9 @@ export function AcopioDataTable() {
 
   useEffect(() => {
     fetchFundos()
+  }, [])
+
+  useEffect(() => {
     fetchData()
   }, [data.currentView, data.selectedFundo, data.selectedEstado, data.dateRange, data.sortBy, data.sortOrder])
 
@@ -55,6 +121,7 @@ export function AcopioDataTable() {
       .from("fundos")
       .select("id, nombre")
       .eq("activo", true)
+      .order("nombre")
     setFundos(fundosData || [])
   }
 
@@ -63,123 +130,257 @@ export function AcopioDataTable() {
     setData(prev => ({ ...prev, loading: true }))
 
     try {
-      let query = supabase.from(data.currentView === 'recepciones' ? 'acopio_recepcion' :
-                               data.currentView === 'pallets' ? 'acopio_pallets' : 'acopio_carga')
-        .select(`
-          *,
-          ${data.currentView === 'recepciones' ? `
-            lotes!inner (
-              id,
-              nombre,
-              fundos!inner (
-                nombre
-              )
-            ),
-            profiles (
-              nombre,
-              apellido
-            )
-          ` : data.currentView === 'pallets' ? `
-            lotes!inner (
-              id,
-              nombre,
-              fundos!inner (
-                nombre
-              )
-            )
-          ` : `
-            acopio_pallets (
-              codigo_pallet,
-              estado
-            ),
-            acopio_recepcion!inner (
-              fecha_recepcion,
-              lotes!inner (
-                nombre,
-                fundos!inner (
-                  nombre
-                )
-              )
-            ),
-            profiles (
-              nombre,
-              apellido
-            )
-          `}
-        `)
-
-      // Filtros de fecha
-      if (data.dateRange?.from && data.dateRange?.to) {
-        const dateField = data.currentView === 'recepciones' ? 'fecha_recepcion' :
-                         data.currentView === 'pallets' ? 'created_at' : 'fecha_carga'
-        query = query
-          .gte(dateField, data.dateRange.from.toISOString())
-          .lte(dateField, data.dateRange.to.toISOString())
+      if (data.currentView === 'recepciones') {
+        await fetchRecepciones(supabase)
+      } else if (data.currentView === 'pallets') {
+        await fetchPallets(supabase)
+      } else {
+        await fetchCargas(supabase)
       }
-
-      // Filtro por fundo
-      if (data.selectedFundo !== "all") {
-        if (data.currentView === 'recepciones') {
-          query = query.eq('lotes.fundos.id', data.selectedFundo)
-        } else if (data.currentView === 'pallets') {
-          query = query.eq('lotes.fundos.id', data.selectedFundo)
-        } else {
-          // Para cargas, filtrar por fundo del pallet
-          query = query.eq('acopio_pallets.fundo', data.selectedFundo)
-        }
-      }
-
-      // Filtro por estado (solo para pallets)
-      if (data.currentView === 'pallets' && data.selectedEstado !== "all") {
-        query = query.eq('estado', data.selectedEstado)
-      }
-
-      // Ordenamiento
-      const sortField = data.sortBy === 'fecha' ?
-        (data.currentView === 'recepciones' ? 'fecha_recepcion' :
-         data.currentView === 'pallets' ? 'created_at' : 'fecha_carga') :
-        data.sortBy === 'cantidad' ?
-        (data.currentView === 'recepciones' ? 'cantidad_recibida' :
-         data.currentView === 'pallets' ? 'capacidad' : 'cantidad') :
-        data.sortBy
-
-      query = query.order(sortField, { ascending: data.sortOrder === 'asc' })
-
-      const { data: result, error } = await query
-
-      if (error) throw error
-
-      // Filtrar por término de búsqueda
-      let filteredData = result || []
-      if (data.searchTerm) {
-        filteredData = filteredData.filter(item => {
-          const searchLower = data.searchTerm.toLowerCase()
-          // Filtro por fundo
-          if (data.selectedFundo !== "all") {
-            if (data.currentView === 'recepciones') {
-              query = query.eq('lotes.fundos.id', data.selectedFundo)
-            } else if (data.currentView === 'pallets') {
-              query = query.eq('lotes.fundos.id', data.selectedFundo)
-            } else {
-              // Para cargas, filtrar por fundo del pallet a través de la recepción
-              query = query.eq('acopio_recepcion.lotes.fundos.id', data.selectedFundo)
-            }
-          }
-
-        })
-      }
-
-      setData(prev => ({
-        ...prev,
-        [data.currentView === 'recepciones' ? 'recepciones' :
-         data.currentView === 'pallets' ? 'pallets' : 'cargas']: filteredData,
-        loading: false
-      }))
-
     } catch (error) {
       console.error("Error fetching data:", error)
       setData(prev => ({ ...prev, loading: false }))
     }
+  }
+
+  const fetchRecepciones = async (supabase: any) => {
+    let query = supabase
+      .from('acopio_recepcion')
+      .select(`
+        *,
+        lotes:id_lote (
+          id,
+          nombre,
+          fundos:id_fundo (
+            id,
+            nombre
+          )
+        )
+      `)
+
+    // Filtro de fecha
+    if (data.dateRange?.from && data.dateRange?.to) {
+      query = query
+        .gte('fecha_recepcion', data.dateRange.from.toISOString())
+        .lte('fecha_recepcion', data.dateRange.to.toISOString())
+    }
+
+    // Ordenamiento
+    const sortField = data.sortBy === 'fecha' ? 'fecha_recepcion' :
+                     data.sortBy === 'cantidad' ? 'cantidad_recibida' : data.sortBy
+    query = query.order(sortField, { ascending: data.sortOrder === 'asc' })
+
+    const { data: result, error } = await query
+
+    if (error) throw error
+
+    // Obtener los perfiles de los responsables
+    const recepciones = (result || []) as Recepcion[]
+    const responsableIds = recepciones
+      .map(r => r.responsable_id)
+      .filter(Boolean)
+    
+    let profilesMap: Record<string, any> = {}
+    if (responsableIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, nombre, apellido')
+        .in('id', responsableIds)
+      
+      if (profiles) {
+        profilesMap = profiles.reduce((acc: any, profile: any) => {
+          acc[profile.id] = profile
+          return acc
+        }, {})
+      }
+    }
+
+    // Agregar perfiles a las recepciones
+    const recepcionesConPerfiles = recepciones.map(r => ({
+      ...r,
+      profiles: r.responsable_id ? profilesMap[r.responsable_id] : null
+    }))
+
+    // Filtrar por fundo y búsqueda en memoria
+    let filteredData = recepcionesConPerfiles
+    
+    if (data.selectedFundo !== "all") {
+      filteredData = filteredData.filter((item: Recepcion) => 
+        item.lotes?.fundos?.id === data.selectedFundo
+      )
+    }
+
+    if (data.searchTerm) {
+      const searchLower = data.searchTerm.toLowerCase()
+      filteredData = filteredData.filter((item: Recepcion) =>
+        item.procedencia?.toLowerCase().includes(searchLower) ||
+        item.calidad?.toLowerCase().includes(searchLower) ||
+        item.lotes?.fundos?.nombre?.toLowerCase().includes(searchLower) ||
+        item.lotes?.nombre?.toLowerCase().includes(searchLower) ||
+        `${item.profiles?.nombre} ${item.profiles?.apellido}`.toLowerCase().includes(searchLower)
+      )
+    }
+
+    setData(prev => ({
+      ...prev,
+      recepciones: filteredData,
+      loading: false
+    }))
+  }
+
+  const fetchPallets = async (supabase: any) => {
+    let query = supabase
+      .from('acopio_pallets')
+      .select(`
+        *,
+          lotes:id_lote (
+          id,
+          nombre,
+          tipo_cultivo,
+          variedad,
+          fundos:id_fundo (
+            id,
+            nombre
+          )
+        )
+
+      `)
+
+    // Filtro de fecha
+    if (data.dateRange?.from && data.dateRange?.to) {
+      query = query
+        .gte('created_at', data.dateRange.from.toISOString())
+        .lte('created_at', data.dateRange.to.toISOString())
+    }
+
+    // Filtro de estado
+    if (data.selectedEstado !== "all") {
+      query = query.eq('estado', data.selectedEstado)
+    }
+
+    // Ordenamiento
+    const sortField = data.sortBy === 'fecha' ? 'created_at' :
+                     data.sortBy === 'cantidad' ? 'capacidad' : data.sortBy
+    query = query.order(sortField, { ascending: data.sortOrder === 'asc' })
+
+    const { data: result, error } = await query
+
+    if (error) throw error
+
+    // Filtrar por fundo y búsqueda en memoria
+    let filteredData = (result || []) as Pallet[]
+    
+    if (data.selectedFundo !== "all") {
+      filteredData = filteredData.filter((item: Pallet) => 
+        item.lotes?.fundos?.id === data.selectedFundo
+      )
+    }
+
+    if (data.searchTerm) {
+      const searchLower = data.searchTerm.toLowerCase()
+      filteredData = filteredData.filter((item: Pallet) =>
+        item.codigo_pallet?.toLowerCase().includes(searchLower) ||
+        item.estado?.toLowerCase().includes(searchLower) ||
+        item.lotes?.fundos?.nombre?.toLowerCase().includes(searchLower) ||
+        item.lotes?.nombre?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    setData(prev => ({
+      ...prev,
+      pallets: filteredData,
+      loading: false
+    }))
+  }
+
+  const fetchCargas = async (supabase: any) => {
+    let query = supabase
+      .from('acopio_carga')
+      .select(`
+        *,
+        acopio_pallets:id_pallet (
+          codigo_pallet,
+          estado
+        ),
+        acopio_recepcion:id_recepcion (
+          fecha_recepcion,
+          lotes:id_lote (
+            nombre,
+            fundos:id_fundo (
+              id,
+              nombre
+            )
+          )
+        )
+      `)
+
+    // Filtro de fecha
+    if (data.dateRange?.from && data.dateRange?.to) {
+      query = query
+        .gte('fecha_carga', data.dateRange.from.toISOString())
+        .lte('fecha_carga', data.dateRange.to.toISOString())
+    }
+
+    // Ordenamiento
+    const sortField = data.sortBy === 'fecha' ? 'fecha_carga' :
+                     data.sortBy === 'cantidad' ? 'cantidad' : data.sortBy
+    query = query.order(sortField, { ascending: data.sortOrder === 'asc' })
+
+    const { data: result, error } = await query
+
+    if (error) throw error
+
+    // Obtener los perfiles de los responsables
+    const cargas = (result || []) as Carga[]
+    const responsableIds = cargas
+      .map(c => c.responsable_id)
+      .filter(Boolean)
+    
+    let profilesMap: Record<string, any> = {}
+    if (responsableIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, nombre, apellido')
+        .in('id', responsableIds)
+      
+      if (profiles) {
+        profilesMap = profiles.reduce((acc: any, profile: any) => {
+          acc[profile.id] = profile
+          return acc
+        }, {})
+      }
+    }
+
+    // Agregar perfiles a las cargas
+    const cargasConPerfiles = cargas.map(c => ({
+      ...c,
+      profiles: c.responsable_id ? profilesMap[c.responsable_id] : null
+    }))
+
+    // Filtrar por fundo y búsqueda en memoria
+    let filteredData = cargasConPerfiles
+    
+    if (data.selectedFundo !== "all") {
+      filteredData = filteredData.filter((item: Carga) => 
+        item.acopio_recepcion?.lotes?.fundos?.id === data.selectedFundo
+      )
+    }
+
+    if (data.searchTerm) {
+      const searchLower = data.searchTerm.toLowerCase()
+      filteredData = filteredData.filter((item: Carga) =>
+        item.acopio_pallets?.codigo_pallet?.toLowerCase().includes(searchLower) ||
+        item.acopio_recepcion?.lotes?.fundos?.nombre?.toLowerCase().includes(searchLower) ||
+        item.acopio_recepcion?.lotes?.nombre?.toLowerCase().includes(searchLower) ||
+        `${item.profiles?.nombre} ${item.profiles?.apellido}`.toLowerCase().includes(searchLower)
+      )
+    }
+
+    setData(prev => ({
+      ...prev,
+      cargas: filteredData,
+      loading: false
+    }))
   }
 
   const exportData = () => {
@@ -189,44 +390,48 @@ export function AcopioDataTable() {
     const csvData = [
       // Headers
       data.currentView === 'recepciones' ?
-        ['Fecha', 'Procedencia', 'Cantidad', 'Calidad', 'Fundo', 'Responsable'] :
+        ['Fecha', 'Procedencia', 'Cantidad', 'Calidad', 'Fundo', 'Lote', 'Responsable'] :
       data.currentView === 'pallets' ?
         ['Código', 'Capacidad', 'Estado', 'Fundo', 'Lote', 'Fecha Creación'] :
-        ['Fecha Carga', 'Pallet', 'Recepción', 'Cantidad', 'Fundo', 'Responsable'],
+        ['Fecha Carga', 'Pallet', 'Cantidad', 'Fundo', 'Lote', 'Responsable'],
       // Data
-      ...currentData.map(item => {
+      ...currentData.map((item) => {
         if (data.currentView === 'recepciones') {
+          const recepcion = item as Recepcion
           return [
-            formatDatePeru(new Date(item.fecha_recepcion)),
-            item.procedencia,
-            item.cantidad_recibida,
-            item.calidad,
-            item.lotes?.fundos?.nombre,
-            `${item.profiles?.nombre} ${item.profiles?.apellido}`
+            formatDatePeru(new Date(recepcion.created_at)),
+            recepcion.procedencia || '',
+            recepcion.cantidad_recibida || 0,
+            recepcion.calidad || '',
+            recepcion.lotes?.fundos?.nombre || '',
+            recepcion.lotes?.nombre || '',
+            `${recepcion.profiles?.nombre || ''} ${recepcion.profiles?.apellido || ''}`
           ]
         } else if (data.currentView === 'pallets') {
+          const pallet = item as Pallet
           return [
-            item.codigo_pallet,
-            item.capacidad,
-            item.estado,
-            item.lotes?.fundos?.nombre,
-            item.lotes?.nombre,
-            formatDatePeru(new Date(item.created_at))
+            pallet.codigo_pallet || '',
+            pallet.capacidad || 0,
+            pallet.estado || '',
+            pallet.lotes?.fundos?.nombre || '',
+            pallet.lotes?.nombre || '',
+            formatDatePeru(new Date(pallet.created_at))
           ]
         } else {
+          const carga = item as Carga
           return [
-            formatDatePeru(new Date(item.fecha_carga)),
-            item.acopio_pallets?.codigo_pallet,
-            formatDatePeru(new Date(item.acopio_recepcion?.fecha_recepcion)),
-            item.cantidad,
-            item.acopio_recepcion?.lotes?.fundos?.nombre,
-            `${item.profiles?.nombre} ${item.profiles?.apellido}`
+            formatDatePeru(new Date(carga.fecha_carga)),
+            carga.acopio_pallets?.codigo_pallet || '',
+            carga.cantidad || 0,
+            carga.acopio_recepcion?.lotes?.fundos?.nombre || '',
+            carga.acopio_recepcion?.lotes?.nombre || '',
+            `${carga.profiles?.nombre || ''} ${carga.profiles?.apellido || ''}`
           ]
         }
       })
     ]
 
-    const csvContent = csvData.map(row => row.map(cell => `"${cell || ''}"`).join(',')).join('\n')
+    const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -391,6 +596,9 @@ export function AcopioDataTable() {
                         </TableHead>
                         <TableHead>Calidad</TableHead>
                         <TableHead>Fundo</TableHead>
+                        <TableHead>Lote</TableHead>
+                        <TableHead>Tipo Cultivo</TableHead>
+                        <TableHead>Variedad</TableHead>
                         <TableHead>Responsable</TableHead>
                       </>
                     ) : data.currentView === 'pallets' ? (
@@ -404,6 +612,8 @@ export function AcopioDataTable() {
                         <TableHead>Estado</TableHead>
                         <TableHead>Fundo</TableHead>
                         <TableHead>Lote</TableHead>
+                        <TableHead>Tipo Cultivo</TableHead>
+                        <TableHead>Variedad</TableHead>
                         <TableHead className="cursor-pointer" onClick={() => handleSort('fecha')}>
                           <div className="flex items-center gap-2">
                             Creado {data.sortBy === 'fecha' && (data.sortOrder === 'asc' ? '↑' : '↓')}
@@ -418,13 +628,15 @@ export function AcopioDataTable() {
                           </div>
                         </TableHead>
                         <TableHead>Pallet</TableHead>
-                        <TableHead>Recepción</TableHead>
                         <TableHead className="cursor-pointer" onClick={() => handleSort('cantidad')}>
                           <div className="flex items-center gap-2">
                             Cantidad {data.sortBy === 'cantidad' && (data.sortOrder === 'asc' ? '↑' : '↓')}
                           </div>
                         </TableHead>
                         <TableHead>Fundo</TableHead>
+                        <TableHead>Lote</TableHead>
+                        <TableHead>Tipo Cultivo</TableHead>
+                        <TableHead>Variedad</TableHead>
                         <TableHead>Responsable</TableHead>
                       </>
                     )}
@@ -438,72 +650,76 @@ export function AcopioDataTable() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
-                              {formatDatePeru(new Date(item.fecha_recepcion))}
+                              {formatDatePeru(new Date((item as Recepcion).created_at))}
                             </div>
                           </TableCell>
-                          <TableCell>{item.procedencia}</TableCell>
+                          
+                          <TableCell>{(item as Recepcion).procedencia}</TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {item.cantidad_recibida.toLocaleString()} jabas
+                              {(item as Recepcion).cantidad_recibida?.toLocaleString()} jabas
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant={
-                              item.calidad === 'Excelente' ? 'default' :
-                              item.calidad === 'Bueno' ? 'secondary' :
-                              item.calidad === 'Regular' ? 'outline' : 'destructive'
+                              (item as Recepcion).calidad === 'Excelente' ? 'default' :
+                              (item as Recepcion).calidad === 'Bueno' ? 'secondary' :
+                              (item as Recepcion).calidad === 'Regular' ? 'outline' : 'destructive'
                             }>
-                              {item.calidad || 'Sin calificar'}
+                              {(item as Recepcion).calidad || 'Sin calificar'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{item.lotes?.fundos?.nombre}</TableCell>
+                          <TableCell>{(item as Recepcion).lotes?.fundos?.nombre || '-'}</TableCell>
+                          <TableCell>{(item as Recepcion).lotes?.nombre || '-'}</TableCell>
                           <TableCell>
-                            {item.profiles?.nombre} {item.profiles?.apellido}
+                            {(item as Recepcion).profiles?.nombre} {(item as Recepcion).profiles?.apellido}
                           </TableCell>
+                          
                         </>
                       ) : data.currentView === 'pallets' ? (
                         <>
-                          <TableCell className="font-mono">{item.codigo_pallet}</TableCell>
-                          <TableCell>{item.capacidad} jabas</TableCell>
+                          <TableCell className="font-mono">{(item as Pallet).codigo_pallet}</TableCell>
+                          <TableCell>{(item as Pallet).capacidad} jabas</TableCell>
                           <TableCell>
                             <Badge variant={
-                              item.estado === 'vacio' ? 'secondary' :
-                              item.estado === 'parcial' ? 'outline' :
-                              item.estado === 'lleno' ? 'default' :
-                              item.estado === 'despachado' ? 'destructive' : 'secondary'
+                              (item as Pallet).estado === 'vacio' ? 'secondary' :
+                              (item as Pallet).estado === 'parcial' ? 'outline' :
+                              (item as Pallet).estado === 'lleno' ? 'default' :
+                              (item as Pallet).estado === 'despachado' ? 'destructive' : 'secondary'
                             }>
-                              {item.estado}
+                              {(item as Pallet).estado}
                             </Badge>
                           </TableCell>
-                          <TableCell>{item.lotes?.fundos?.nombre}</TableCell>
-                          <TableCell>{item.lotes?.nombre}</TableCell>
-                          <TableCell>{formatDatePeru(new Date(item.created_at))}</TableCell>
+                          <TableCell>{(item as Pallet).lotes?.fundos?.nombre || '-'}</TableCell>
+                          <TableCell>{(item as Pallet).lotes?.nombre || '-'}</TableCell>
+                          <TableCell>{formatDatePeru(new Date((item as Pallet).created_at))}</TableCell>
                         </>
                       ) : (
                         <>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
-                              {formatDatePeru(new Date(item.fecha_carga))}
+                              {formatDatePeru(new Date((item as Carga).fecha_carga))}
                             </div>
                           </TableCell>
                           <TableCell className="font-mono">
-                            {item.acopio_pallets?.codigo_pallet}
-                          </TableCell>
-                          <TableCell>
-                            {formatDatePeru(new Date(item.acopio_recepcion?.fecha_recepcion))}
+                            {(item as Carga).acopio_pallets?.codigo_pallet || '-'}
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {item.cantidad} jabas
+                              {(item as Carga).cantidad} jabas
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {item.acopio_recepcion?.lotes?.fundos?.nombre}
+                            {(item as Carga).acopio_recepcion?.lotes?.fundos?.nombre || '-'}
                           </TableCell>
                           <TableCell>
-                            {item.profiles?.nombre} {item.profiles?.apellido}
+                            {(item as Carga).acopio_recepcion?.lotes?.nombre || '-'}
                           </TableCell>
+                          <TableCell>
+                            {(item as Carga).profiles?.nombre} {(item as Carga).profiles?.apellido}
+                          </TableCell>
+                          
                         </>
                       )}
                     </TableRow>

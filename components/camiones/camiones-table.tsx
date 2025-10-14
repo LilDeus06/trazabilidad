@@ -115,6 +115,38 @@ export function CamionesTable({ camiones, permissions, userRole }: CamionesTable
     window.open('/api/camiones/export?full=true', '_blank')
   }
 
+    const handleExportChoferes = () => {
+    // Exportar solo la información de choferes
+    const choferesData = camiones.map(camion => ({
+      'ID': camion.id,
+      'Chofer': camion.chofer,
+      'Placa': camion.placa,
+      'Capacidad': camion.capacidad,
+      'Estado': camion.activo ? 'Activo' : 'Inactivo',
+      'Fundo': camion.fundos?.nombre || 'Sin asignar',
+      'Lote': camion.lotes?.nombre || 'Sin asignar'
+    }))
+
+    // Crear CSV
+    const headers = Object.keys(choferesData[0] || {})
+    const csvContent = [
+      headers.join(','),
+      ...choferesData.map(row =>
+        headers.map(header => `"${(row as any)[header] || ''}"`).join(',')
+      )
+    ].join('\n')
+
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `choferes_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+
   const columns = [
     {
       key: 'placa',
@@ -268,6 +300,14 @@ export function CamionesTable({ camiones, permissions, userRole }: CamionesTable
           >
             <Download className="h-4 w-4" />
             Exportar Todo
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportChoferes}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Exportar Choferes
           </Button>
         </div>
       </div>
