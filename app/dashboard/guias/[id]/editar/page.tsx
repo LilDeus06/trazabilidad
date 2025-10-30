@@ -17,18 +17,27 @@ export default async function EditGuiaPage({ params }: EditGuiaPageProps) {
     redirect("/auth/login")
   }
 
-  // Verificar que sea admin
+ // Verificar permisos del usuario para editar guías
+  const { data: permissions } = await supabase
+    .from("user_module_permissions")
+    .select("can_write")
+    .eq("user_id", user.id)
+    .eq("module_name", "guias")
+    .single()
+
   const { data: profile } = await supabase.from("profiles").select("rol").eq("id", user.id).single()
 
-  if (!profile || profile.rol !== "admin") {
-    redirect("/dashboard/guias")
-  }
-
-  // Obtener datos de la guía
+  // Obtener datos de la guía primero para verificar ownership
   const { data: guia, error: guiaError } = await supabase.from("guias").select("*").eq("id", id).single()
 
   if (guiaError || !guia) {
     notFound()
+  }
+
+  const canEdit = permissions?.can_write || profile?.rol === "admin" || guia.usuario_id === user.id
+
+  if (!canEdit) {
+    redirect("/dashboard/guias")
   }
 
   // Obtener cantidades de lotes si existen
